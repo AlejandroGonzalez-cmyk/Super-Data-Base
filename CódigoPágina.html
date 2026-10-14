@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Acceso al sistema de evaluación de eventos educativos.">
+  <title>Acceso | Sistema de Evaluación</title>
+  <link rel="stylesheet" href="css/css.css">
+</head>
+<body>
+  <main class="pagina">
+    <section class="panel-presentacion" aria-label="Presentación del sistema">
+      <div class="marca">
+        <!-- Reemplazá este bloque por el logo del colegio cuando lo tengas. -->
+        <div class="logo-placeholder" aria-label="Espacio reservado para el logo del colegio">
+          <span>LOGO</span>
+        </div>
+        <div class="marca-texto">
+          <span class="marca-titulo">Sistema de Evaluación</span>
+          <span class="marca-subtitulo">Eventos educativos</span>
+        </div>
+      </div>
+
+      <div class="presentacion-contenido">
+        <p class="etiqueta">PLATAFORMA ACADÉMICA</p>
+        <h1>Evaluar para<br><span>seguir creciendo.</span></h1>
+        <p class="presentacion-descripcion">
+          Un espacio digital para gestionar evaluaciones y consultar resultados
+          de manera organizada, clara y segura.
+        </p>
+      </div>
+
+      <div class="presentacion-pie">
+        <span class="punto-decorativo" aria-hidden="true"></span>
+        <p>Una plataforma para la comunidad educativa</p>
+      </div>
+    </section>
+
+    <section class="panel-login" aria-labelledby="titulo-login">
+      <div class="login-contenido">
+        <div class="login-encabezado">
+          <p class="saludo">Bienvenido/a</p>
+          <h2 id="titulo-login">Iniciar sesión</h2>
+          <p>Ingresá tus datos para acceder a la plataforma.</p>
+        </div>
+
+        <!-- Maqueta visual: todavía no envía ni valida credenciales. -->
+        <form class="formulario" action="#" method="post">
+          <div class="campo">
+            <label for="usuario">Correo electrónico o usuario</label>
+            <input
+              type="text"
+              id="usuario"
+              name="usuario"
+              placeholder="Ingresá tu usuario"
+              autocomplete="username"
+              required
+            >
+          </div>
+
+          <div class="campo">
+            <label for="contrasena">Contraseña</label>
+            <input
+              type="password"
+              id="contrasena"
+              name="contrasena"
+              placeholder="Ingresá tu contraseña"
+              autocomplete="current-password"
+              required
+            >
+          </div>
+
+          <button class="boton-ingresar" type="button">
+            Ingresar
+            <span aria-hidden="true">→</span>
+          </button>
+
+          <p class="aviso-demo">
+            <span class="icono-info" aria-hidden="true">i</span>
+            Esta es una versión de diseño. El inicio de sesión todavía no está conectado.
+          </p>
+        </form>
+
+        <div class="login-separador" aria-hidden="true"></div>
+
+        <p class="ayuda">
+          ¿Problemas para ingresar?
+          <span>Contactá al administrador del sistema.</span>
+        </p>
+      </div>
+
+      <footer class="pie-login">
+        <span>© <span id="anio">2026</span> Sistema de Evaluación</span>
+        <span class="pie-punto" aria-hidden="true">•</span>
+        <span>Uso institucional</span>
+      </footer>
+    </section>
+  </main>
+</body>
+</html>
