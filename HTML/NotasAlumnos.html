@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta de Notas - Alumnos</title>
+
+    <!-- 1. Cargar la librería oficial de Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 650px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 25px 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        h2 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        .section-title {
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #007bff;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        button {
+            width: 100%;
+            background-color: #007bff;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #mensaje {
+            margin-top: 15px;
+            text-align: center;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+        /* Tarjeta de Resultados */
+        .resultado-card {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .info-box {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+        .info-box span {
+            display: block;
+            font-size: 0.85em;
+            color: #6c757d;
+        }
+        .info-box strong {
+            font-size: 1.1em;
+            color: #2c3e50;
+        }
+        .nota-destacada {
+            color: #28a745 !important;
+            font-size: 1.3em !important;
+        }
+        /* Tabla de Criterios */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            background: white;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+            font-size: 14px;
+        }
+        th {
+            background-color: #e9ecef;
+            color: #495057;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Portal de Alumnos - Consulta de Notas</h2>
+
+    <!-- FORMULARIO DE BÚSQUEDA POR CORREO -->
+    <div class="form-group">
+        <label for="correo_alumno">Ingresa tu correo electrónico:</label>
+        <input type="email" id="correo_alumno" placeholder="ejemplo@correo.com" required>
+    </div>
+    <button id="btnBuscar">Consultar Mis Notas</button>
+
+    <div id="mensaje"></div>
+
+    <!-- TARJETA CON RESULTADOS DE LAS NOTAS -->
+    <div id="resultadoCard" class="resultado-card">
+        
+        <div class="section-title">Datos del Alumno</div>
+        <div class="info-grid">
+            <div class="info-box">
+                <span>Alumno/a:</span>
+                <strong id="resNombre">-</strong>
+            </div>
+            <div class="info-box">
+                <span>Grupo:</span>
+                <strong id="resGrupo">-</strong>
+            </div>
+            <div class="info-box">
+                <span>Nota Individual:</span>
+                <strong id="resNotaIndividual" class="nota-destacada">-</strong>
+            </div>
+            <div class="info-box">
+                <span>Promedio Grupal:</span>
+                <strong id="resPromedioGrupal" class="nota-destacada">-</strong>
+            </div>
+        </div>
+
+        <div class="section-title">Desglose de Notas Grupales por Criterio</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Criterio</th>
+                    <th>Nota</th>
+                </tr>
+            </thead>
+            <tbody id="tablaNotasCriterio">
+                <!-- Se llena dinámicamente con JavaScript -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // Configuración de credenciales de Supabase
+    const SUPABASE_URL = 'https://mcoxfiwmmcfughfybxij.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_izeEOV-__s9okF5yJMsMGw_-QNYnh7h';
+
+    // Inicializar cliente
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    document.getElementById('btnBuscar').addEventListener('click', async function() {
+        const correoInput = document.getElementById('correo_alumno').value.trim();
+        const mensajeBox = document.getElementById('mensaje');
+        const resultadoCard = document.getElementById('resultadoCard');
+        const tablaBody = document.getElementById('tablaNotasCriterio');
+
+        if (!correoInput) {
+            mostrarMensaje('Por favor, ingresa un correo electrónico.', 'orange');
+            return;
+        }
+
+        mostrarMensaje('Buscando calificaciones...', 'blue');
+        resultadoCard.style.display = 'none';
+
+        try {
+            // Nota: Asegúrate de tener una columna de correo en tu tabla 'alumnos' (ej: 'correo')
+            // O si prefieres buscar por la tabla 'usuarios' vinculada al alumno, me avisas.
+            // Aquí asumimos que la tabla 'alumnos' tiene el campo 'correo'.
+            const { data: alumnoData, error: alumnoError } = await supabaseClient
+                .from('alumnos')
+                .select(`
+                    id_alumno,
+                    nombre,
+                    apellido,
+                    correo,
+                    nota_individual,
+                    id_grupos,
+                    grupos ( nombre )
+                `)
+                .eq('correo', correoInput)
+                .single();
+
+            if (alumnoError || !alumnoData) {
+                mostrarMensaje('No se encontró ningún alumno registrado con ese correo.', 'red');
+                return;
+            }
+
+            // Mostrar información básica del alumno
+            document.getElementById('resNombre').innerText = `${alumnoData.nombre} ${alumnoData.apellido || ''}`;
+            document.getElementById('resGrupo').innerText = alumnoData.grupos ? alumnoData.grupos.nombre : 'Sin grupo asignado';
+            document.getElementById('resNotaIndividual').innerText = alumnoData.nota_individual !== null ? alumnoData.nota_individual : 'N/A';
+
+            // 2. Obtener notas grupales por criterio si el alumno tiene un grupo
+            if (alumnoData.id_grupos) {
+                const { data: notasData, error: notasError } = await supabaseClient
+                    .from('notas')
+                    .select(`
+                        nota,
+                        criterios ( criterio )
+                    `)
+                    .eq('id_grupos', alumnoData.id_grupos);
+
+                tablaBody.innerHTML = ''; // Limpiar tabla
+
+                if (notasData && notasData.length > 0) {
+                    let sumaNotas = 0;
+
+                    notasData.forEach(item => {
+                        sumaNotas += item.nota;
+                        const fila = `
+                            <tr>
+                                <td>${item.criterios ? item.criterios.criterio : 'Criterio sin nombre'}</td>
+                                <td><strong>${item.nota}</strong></td>
+                            </tr>
+                        `;
+                        tablaBody.innerHTML += fila;
+                    });
+
+                    // Calcular promedio grupal
+                    const promedio = (sumaNotas / notasData.length).toFixed(1);
+                    document.getElementById('resPromedioGrupal').innerText = promedio;
+                } else {
+                    tablaBody.innerHTML = '<tr><td colspan="2">Aún no hay notas cargadas para este grupo.</td></tr>';
+                    document.getElementById('resPromedioGrupal').innerText = 'N/A';
+                }
+            } else {
+                tablaBody.innerHTML = '<tr><td colspan="2">El alumno no está asignado a ningún grupo.</td></tr>';
+                document.getElementById('resPromedioGrupal').innerText = 'N/A';
+            }
+
+            // Ocultar mensaje y mostrar resultados
+            mensajeBox.style.display = 'none';
+            resultadoCard.style.display = 'block';
+
+        } catch (err) {
+            mostrarMensaje('Ocurrió un error al consultar: ' + err.message, 'red');
+        }
+    });
+
+    function mostrarMensaje(texto, color) {
+        const mensajeBox = document.getElementById('mensaje');
+        mensajeBox.style.display = 'block';
+        mensajeBox.innerText = texto;
+        
+        if (color === 'red') {
+            mensajeBox.style.background = '#f8d7da';
+            mensajeBox.style.color = '#721c24';
+        } else if (color === 'blue') {
+            mensajeBox.style.background = '#d1ecf1';
+            mensajeBox.style.color = '#0c5460';
+        } else if (color === 'orange') {
+            mensajeBox.style.background = '#fff3cd';
+            mensajeBox.style.color = '#856404';
+        }
+    }
+</script>
+
+</body>
+</html>
