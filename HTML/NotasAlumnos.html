@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Consulta de Notas - Alumnos</title>
+    <title>Mis Notas - Portal de Alumnos</title>
 
     <!-- 1. Cargar la librería oficial de Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -38,58 +38,17 @@
             margin-top: 25px;
             margin-bottom: 15px;
         }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 6px;
-            font-weight: 600;
-        }
-        input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            box-sizing: border-box;
-            font-size: 14px;
-        }
-        input:focus {
-            outline: none;
-            border-color: #007bff;
-        }
-        button {
-            width: 100%;
-            background-color: #007bff;
-            color: white;
-            padding: 12px;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 10px;
-            transition: background 0.3s;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
         #mensaje {
             margin-top: 15px;
             text-align: center;
             font-weight: bold;
-            padding: 10px;
+            padding: 12px;
             border-radius: 5px;
-            display: none;
         }
         /* Tarjeta de Resultados */
         .resultado-card {
             display: none;
-            margin-top: 20px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border: 1px solid #dee2e6;
+            margin-top: 10px;
         }
         .info-grid {
             display: grid;
@@ -98,8 +57,8 @@
             margin-bottom: 15px;
         }
         .info-box {
-            background: white;
-            padding: 10px;
+            background: #f8f9fa;
+            padding: 12px;
             border-radius: 6px;
             border: 1px solid #e9ecef;
         }
@@ -138,21 +97,14 @@
 <body>
 
 <div class="container">
-    <h2>Portal de Alumnos - Consulta de Notas</h2>
+    <h2>Mis Calificaciones</h2>
 
-    <!-- FORMULARIO DE BÚSQUEDA POR CORREO -->
-    <div class="form-group">
-        <label for="correo_alumno">Ingresa tu correo electrónico:</label>
-        <input type="email" id="correo_alumno" placeholder="ejemplo@correo.com" required>
-    </div>
-    <button id="btnBuscar">Consultar Mis Notas</button>
+    <div id="mensaje" style="background: #d1ecf1; color: #0c5460;">Cargando tus notas...</div>
 
-    <div id="mensaje"></div>
-
-    <!-- TARJETA CON RESULTADOS DE LAS NOTAS -->
+    <!-- TARJETA CON RESULTADOS DE LAS NOTAS (Visible al cargar los datos) -->
     <div id="resultadoCard" class="resultado-card">
         
-        <div class="section-title">Datos del Alumno</div>
+        <div class="section-title">Información del Alumno</div>
         <div class="info-grid">
             <div class="info-box">
                 <span>Alumno/a:</span>
@@ -195,49 +147,49 @@
     // Inicializar cliente
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    document.getElementById('btnBuscar').addEventListener('click', async function() {
-        const correoInput = document.getElementById('correo_alumno').value.trim();
+    // Ejecutar la carga de datos automáticamente cuando la página abre
+    window.addEventListener('DOMContentLoaded', async function() {
         const mensajeBox = document.getElementById('mensaje');
         const resultadoCard = document.getElementById('resultadoCard');
         const tablaBody = document.getElementById('tablaNotasCriterio');
 
-        if (!correoInput) {
-            mostrarMensaje('Por favor, ingresa un correo electrónico.', 'orange');
-            return;
-        }
-
-        mostrarMensaje('Buscando calificaciones...', 'blue');
-        resultadoCard.style.display = 'none';
-
         try {
-            // Nota: Asegúrate de tener una columna de correo en tu tabla 'alumnos' (ej: 'correo')
-            // O si prefieres buscar por la tabla 'usuarios' vinculada al alumno, me avisas.
-            // Aquí asumimos que la tabla 'alumnos' tiene el campo 'correo'.
+            // 1. Obtener la sesión activa del usuario actual en Supabase
+            const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+
+            if (sessionError || !session) {
+                mostrarMensaje('No hay una sesión activa. Por favor, inicia sesión para ver tus notas.', 'red');
+                return;
+            }
+
+            const correoUsuario = session.user.email;
+
+            // 2. Buscar los datos del alumno en la tabla 'alumnos' usando el correo electrónico
+            // (Nota: Asegúrate de que la tabla 'alumnos' tenga una columna de correo para este vínculo automático)
             const { data: alumnoData, error: alumnoError } = await supabaseClient
                 .from('alumnos')
                 .select(`
                     id_alumno,
                     nombre,
                     apellido,
-                    correo,
                     nota_individual,
                     id_grupos,
                     grupos ( nombre )
                 `)
-                .eq('correo', correoInput)
+                .eq('correo', correoUsuario)
                 .single();
 
             if (alumnoError || !alumnoData) {
-                mostrarMensaje('No se encontró ningún alumno registrado con ese correo.', 'red');
+                mostrarMensaje('No se encontró un registro de alumno asociado al correo: ' + correoUsuario, 'orange');
                 return;
             }
 
-            // Mostrar información básica del alumno
+            // Mostrar información básica del alumno en la interfaz
             document.getElementById('resNombre').innerText = `${alumnoData.nombre} ${alumnoData.apellido || ''}`;
             document.getElementById('resGrupo').innerText = alumnoData.grupos ? alumnoData.grupos.nombre : 'Sin grupo asignado';
             document.getElementById('resNotaIndividual').innerText = alumnoData.nota_individual !== null ? alumnoData.nota_individual : 'N/A';
 
-            // 2. Obtener notas grupales por criterio si el alumno tiene un grupo
+            // 3. Obtener notas grupales por criterio si el alumno pertenece a un grupo
             if (alumnoData.id_grupos) {
                 const { data: notasData, error: notasError } = await supabaseClient
                     .from('notas')
@@ -267,20 +219,20 @@
                     const promedio = (sumaNotas / notasData.length).toFixed(1);
                     document.getElementById('resPromedioGrupal').innerText = promedio;
                 } else {
-                    tablaBody.innerHTML = '<tr><td colspan="2">Aún no hay notas cargadas para este grupo.</td></tr>';
+                    tablaBody.innerHTML = '<tr><td colspan="2">Aún no hay notas grupales cargadas para este grupo.</td></tr>';
                     document.getElementById('resPromedioGrupal').innerText = 'N/A';
                 }
             } else {
-                tablaBody.innerHTML = '<tr><td colspan="2">El alumno no está asignado a ningún grupo.</td></tr>';
+                tablaBody.innerHTML = '<tr><td colspan="2">No estás asignado a ningún grupo actualmente.</td></tr>';
                 document.getElementById('resPromedioGrupal').innerText = 'N/A';
             }
 
-            // Ocultar mensaje y mostrar resultados
+            // Ocultar mensaje de carga y mostrar la tarjeta de notas
             mensajeBox.style.display = 'none';
             resultadoCard.style.display = 'block';
 
         } catch (err) {
-            mostrarMensaje('Ocurrió un error al consultar: ' + err.message, 'red');
+            mostrarMensaje('Ocurrió un error al cargar las calificaciones: ' + err.message, 'red');
         }
     });
 
@@ -292,9 +244,6 @@
         if (color === 'red') {
             mensajeBox.style.background = '#f8d7da';
             mensajeBox.style.color = '#721c24';
-        } else if (color === 'blue') {
-            mensajeBox.style.background = '#d1ecf1';
-            mensajeBox.style.color = '#0c5460';
         } else if (color === 'orange') {
             mensajeBox.style.background = '#fff3cd';
             mensajeBox.style.color = '#856404';
