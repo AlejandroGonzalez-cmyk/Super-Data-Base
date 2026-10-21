@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guía de Criterios - Panel de Jurados</title>
+
+    <!-- 1. Cargar la librería oficial de Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 25px 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        h2 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.95em;
+            margin-bottom: 25px;
+        }
+        #mensaje {
+            text-align: center;
+            font-weight: bold;
+            padding: 12px;
+            border-radius: 5px;
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        /* Contenedor de Tarjetas de Criterios */
+        .criterios-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .criterio-card {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-left: 5px solid #007bff;
+            padding: 15px 20px;
+            border-radius: 6px;
+        }
+        .criterio-header {
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #007bff;
+            margin-bottom: 5px;
+        }
+        .criterio-desc {
+            font-size: 1em;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        .criterio-proyecto {
+            font-size: 0.85em;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Guía de Criterios de Evaluación</h2>
+    <p class="subtitle">Parámetros oficiales obtenidos desde la base de datos para el jurado.</p>
+
+    <div id="mensaje">Cargando criterios...</div>
+
+    <!-- Contenedor donde se cargarán dinámicamente los criterios -->
+    <div id="criteriosContainer" class="criterios-grid"></div>
+</div>
+
+<script>
+    // Configuración de credenciales de Supabase
+    const SUPABASE_URL = 'https://mcoxfiwmmcfughfybxij.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_izeEOV-__s9okF5yJMsMGw_-QNYnh7h';
+
+    // Inicializar cliente
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Cargar los criterios automáticamente al abrir la página
+    window.addEventListener('DOMContentLoaded', async function() {
+        const mensajeBox = document.getElementById('mensaje');
+        const contenedor = document.getElementById('criteriosContainer');
+
+        try {
+            // Consultar la tabla 'criterios' en Supabase ordenados por su ID
+            const { data: criteriosData, error } = await supabaseClient
+                .from('criterios')
+                .select('*')
+                .order('id_criterios', { ascending: true });
+
+            if (error) {
+                mensajeBox.style.background = '#f8d7da';
+                mensajeBox.style.color = '#721c24';
+                mensajeBox.innerText = 'Error al cargar los criterios: ' + error.message;
+                return;
+            }
+
+            if (!criteriosData || criteriosData.length === 0) {
+                mensajeBox.style.background = '#fff3cd';
+                mensajeBox.style.color = '#856404';
+                mensajeBox.innerText = 'No hay criterios registrados en la base de datos todavía.';
+                return;
+            }
+
+            // Ocultar mensaje de carga
+            mensajeBox.style.display = 'none';
+
+            // Generar dinámicamente las tarjetas para cada criterio
+            criteriosData.forEach((item, index) => {
+                const numeroCriterio = index + 1; // Para numerarlos como Criterio 1, Criterio 2...
+                
+                const tarjeta = document.createElement('div');
+                tarjeta.className = 'criterio-card';
+                tarjeta.innerHTML = `
+                    <div class="criterio-header">Criterio ${numeroCriterio} (Año: ${item.año})</div>
+                    <div class="criterio-desc"><strong>Descripción:</strong> ${item.criterio}</div>
+                    ${item.proyecto ? `<div class="criterio-proyecto"><strong>Proyecto/Detalle:</strong> ${item.proyecto}</div>` : ''}
+                `;
+                contenedor.appendChild(tarjeta);
+            });
+
+        } catch (err) {
+            mensajeBox.style.background = '#f8d7da';
+            mensajeBox.style.color = '#721c24';
+            mensajeBox.innerText = 'Ocurrió un error inesperado: ' + err.message;
+        }
+    });
+</script>
+
+</body>
+</html>
