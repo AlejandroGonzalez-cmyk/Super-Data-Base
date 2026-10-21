@@ -176,7 +176,7 @@
                     id_grupos,
                     grupos ( nombre )
                 `)
-                .eq('correo', correoUsuario)
+                .eq('correo', correoUsuario) //Esto no les sirve, la tabla alumnos no tiene ningun campo para el correo
                 .single();
 
             if (alumnoError || !alumnoData) {
