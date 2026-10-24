@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carga de Notas - Olimpiada de Informática</title>
+    <!-- Importar la librería de Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="cssnotagrup.css">
+</head>
+<body>
+        <div id="header-placeholder"></div>
+<div class="container">
+    <h2>Registro de Calificaciones</h2>
+    
+    <form id="formEvaluacion">
+        <!-- SECCIÓN 1: IDENTIFICACIÓN, AÑO Y GRUPO -->
+        <div class="grid-2">
+            <div class="form-group">
+                <label for="id_jurado">ID Jurado:</label>
+                <input type="number" id="id_jurado" placeholder="Ej: 1" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="select_anio">Seleccionar Año:</label>
+                <select id="select_anio" required>
+                    <option value="">-- Seleccione un año --</option>
+                    <option value="4">4to Año</option>
+                    <option value="5">5to Año</option>
+                    <option value="6">6to Año</option>
+                    <option value="7">7mo Año</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="id_grupos">Grupo:</label>
+            <select id="id_grupos" required>
+                <option value="">-- Primero seleccione un año --</option>
+            </select>
+        </div>
+
+        <!-- SECCIÓN 2: EVALUACIÓN GRUPAL (TODOS LOS CRITERIOS) -->
+        <div class="section-title">Evaluación por Criterio (Grupal)</div>
+        <div id="contenedor-criterios">
+            <p style="text-align: center; color: #6b7280; font-size: 0.9rem; padding: 10px;">-- Cargando criterios de evaluación --</p>
+        </div>
+
+        <!-- SECCIÓN 3: EVALUACIÓN INDIVIDUAL DINÁMICA -->
+        <div class="section-title">Calificaciones Individuales de los Integrantes</div>
+        <div id="contenedor-alumnos">
+            <p style="text-align: center; color: #6b7280; font-size: 0.9rem; padding: 10px;">-- Seleccione un grupo para ver y calificar a sus alumnos --</p>
+        </div>
+
+        <button type="submit">Guardar Todas las Calificaciones</button>
+    </form>
+
+    <div id="mensaje"></div>
+</div>
+
+<script>
+    // Configuración de credenciales de Supabase
+    const SUPABASE_URL = 'https://mcoxfiwmmcfughfybxij.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_izeEOV-__s9okF5yJMsMGw_-QNYnh7h';
+
+    // Inicializar cliente
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Función para cargar TODOS los criterios al iniciar la página (sin filtrar por año)
+    async function cargarCriterios() {
+        const contenedorCriterios = document.getElementById('contenedor-criterios');
+        
+        const { data, error } = await supabaseClient
+            .from('criterios')
+            .select('id_criterios, criterio, proyecto');
+
+        if (error) {
+            console.error('Error al cargar criterios:', error.message);
+            contenedorCriterios.innerHTML = '<p style="text-align: center; color: #dc2626;">Error al cargar los criterios</p>';
+            return;
+        }
+
+        if (data.length === 0) {
+            contenedorCriterios.innerHTML = '<p style="text-align: center; color: #6b7280; font-size: 0.9rem; padding: 10px;">No hay criterios registrados</p>';
+            return;
+        }
+
+        let htmlCriterios = '';
+        data.forEach(c => {
+            htmlCriterios += `
+                <div class="alumno-row" style="margin-bottom: 15px;">
+                    <div class="alumno-info">
+                        <strong>${c.criterio}</strong>
+                        <span style="font-size: 0.85rem; color: #6b7280;">Proyecto: ${c.proyecto ? c.proyecto : 'N/A'}</span>
+                    </div>
+                    <div class="alumno-input-container">
+                        <input type="number" 
+                               class="input-nota-criterio" 
+                               data-id-criterio="${c.id_criterios}" 
+                               min="1" max="10" 
+                               placeholder="Nota (1-10)" 
+                               required>
+                    </div>
+                </div>
+            `;
+        });
+
+        contenedorCriterios.innerHTML = htmlCriterios;
+    }
+
+    // Ejecutar la carga de todos los criterios al cargar la ventana
+    window.addEventListener('DOMContentLoaded', cargarCriterios);
+
+    // 1. EVENTO: Al cambiar el año, filtramos y cargamos los grupos
+    document.getElementById('select_anio').addEventListener('change', async function(e) {
+        const anioSeleccionado = e.target.value;
+        const selectGrupos = document.getElementById('id_grupos');
+        const contenedorAlumnos = document.getElementById('contenedor-alumnos');
+        
+        selectGrupos.innerHTML = '<option value="">Cargando grupos...</option>';
+        contenedorAlumnos.innerHTML = '<p style="text-align: center; color: #6b7280; font-size: 0.9rem; padding: 10px;">-- Seleccione un grupo para ver y calificar a sus alumnos --</p>';
+
+        if (!anioSeleccionado) {
+            selectGrupos.innerHTML = '<option value="">-- Primero seleccione un año --</option>';
+            return;
+        }
+
+        const { data, error } = await supabaseClient
+            .from('grupos')
+            .select('id_grupos, nombre, año')
+            .eq('año', anioSeleccionado);
+
+        if (error) {
+            console.error('Error al cargar grupos:', error.message);
+            selectGrupos.innerHTML = '<option value="">Error al cargar grupos</option>';
+            return;
+        }
+
+        selectGrupos.innerHTML = '<option value="">-- Seleccione un grupo --</option>';
+        
+        if (data.length === 0) {
+            selectGrupos.innerHTML = '<option value="">No hay grupos registrados para este año</option>';
+            return;
+        }
+
+        data.forEach(grupo => {
+            const option = document.createElement('option');
+            option.value = grupo.id_grupos;
+            option.innerText = `ID: ${grupo.id_grupos} - ${grupo.nombre}`; 
+            selectGrupos.appendChild(option);
+        });
+    });
+
+    // 2. EVENTO: Al cambiar de grupo, consultamos la tabla alumnos
+    document.getElementById('id_grupos').addEventListener('change', async function(e) {
+        const grupoSeleccionado = e.target.value;
+        const contenedorAlumnos = document.getElementById('contenedor-alumnos');
+
+        contenedorAlumnos.innerHTML = '<p style="text-align: center; color: #4b5563;">Cargando alumnos del grupo...</p>';
+
+        if (!grupoSeleccionado) {
+            contenedorAlumnos.innerHTML = '<p style="text-align: center; color: #6b7280; font-size: 0.9rem; padding: 10px;">-- Seleccione un grupo para ver y calificar a sus alumnos --</p>';
+            return;
+        }
+
+        const { data, error } = await supabaseClient
+            .from('alumnos')
+            .select('id_alumno, nombre, apellido, dni, nota_individual')
+            .eq('id_grupos', grupoSeleccionado);
+
+        if (error) {
+            console.error('Error al cargar alumnos:', error.message);
+            contenedorAlumnos.innerHTML = '<p style="text-align: center; color: #dc2626;">Error al cargar alumnos</p>';
+            return;
+        }
+
+        if (data.length === 0) {
+            contenedorAlumnos.innerHTML = '<p style="text-align: center; color: #6b7280; font-size: 0.9rem; padding: 10px;">No hay alumnos registrados en este grupo</p>';
+            return;
+        }
+
+        let htmlDinamico = '';
+        data.forEach(alumno => {
+            htmlDinamico += `
+                <div class="alumno-row">
+                    <div class="alumno-info">
+                        <strong>${alumno.apellido}, ${alumno.nombre}</strong>
+                        <span>DNI: ${alumno.dni}</span>
+                    </div>
+                    <div class="alumno-input-container">
+                        <input type="number" 
+                               class="input-nota-alumno" 
+                               data-id="${alumno.id_alumno}" 
+                               min="1" max="10" 
+                               placeholder="Nota (1-10)" 
+                               value="${alumno.nota_individual !== null ? alumno.nota_individual : ''}" 
+                               required>
+                    </div>
+                </div>
+            `;
+        });
+
+        contenedorAlumnos.innerHTML = htmlDinamico;
+    });
+
+    // 3. EVENTO: Envío del formulario (guarda todas las notas grupales por criterio y notas individuales)
+    document.getElementById('formEvaluacion').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const mensajeBox = document.getElementById('mensaje');
+        mensajeBox.style.background = '#e9ecef';
+        mensajeBox.style.color = '#333';
+        mensajeBox.innerText = 'Guardando calificaciones...';
+
+        const idJurado = parseInt(document.getElementById('id_jurado').value);
+        const idGrupo = parseInt(document.getElementById('id_grupos').value);
+
+        // A. Recopilar y guardar las notas grupales de cada criterio
+        const inputsCriterios = document.querySelectorAll('.input-nota-criterio');
+        let notasGrupalesArray = [];
+
+        inputsCriterios.forEach(input => {
+            const idCriterio = parseInt(input.getAttribute('data-id-criterio'));
+            const notaCriterio = parseInt(input.value);
+
+            notasGrupalesArray.push({
+                id_jurado: idJurado,
+                id_grupos: idGrupo,
+                id_criterios: idCriterio,
+                nota: notaCriterio
+            });
+        });
+
+        const { error: errorNotaGrupal } = await supabaseClient
+            .from('notas') 
+            .insert(notasGrupalesArray);
+
+        if (errorNotaGrupal) {
+            mensajeBox.style.background = '#f8d7da';
+            mensajeBox.style.color = '#721c24';
+            mensajeBox.innerText = 'Error al guardar las notas grupales: ' + errorNotaGrupal.message;
+            return;
+        }
+
+        // B. Actualizar las notas individuales de los alumnos
+        const inputsAlumnos = document.querySelectorAll('.input-nota-alumno');
+        let huboErrorIndividual = false;
+
+        for (const input of inputsAlumnos) {
+            const idAlumno = input.getAttribute('data-id');
+            const notaInd = parseInt(input.value);
+
+            const { error: errorUpd } = await supabaseClient
+                .from('alumnos')
+                .update({ nota_individual: notaInd })
+                .eq('id_alumno', idAlumno);
+
+            if (errorUpd) {
+                huboErrorIndividual = true;
+                console.error(`Error al actualizar alumno ID ${idAlumno}:`, errorUpd.message);
+            }
+        }
+
+        if (huboErrorIndividual) {
+            mensajeBox.style.background = '#fff3cd';
+            mensajeBox.style.color = '#856404';
+            mensajeBox.innerText = 'Notas grupales guardadas, pero hubo inconvenientes al guardar algunas notas individuales.';
+        } else {
+            mensajeBox.style.background = '#d4edda';
+            mensajeBox.style.color = '#155724';
+            mensajeBox.innerText = '¡Calificaciones grupales y de todos los integrantes guardadas con éxito!';
+            document.getElementById('formEvaluacion').reset();
+            document.getElementById('select_anio').value = '';
+            document.getElementById('id_grupos').innerHTML = '<option value="">-- Primero seleccione un año --</option>';
+            document.getElementById('contenedor-alumnos').innerHTML = '<p style="text-align: center; color: #6b7280; font-size: 0.9rem; padding: 10px;">-- Seleccione un grupo para ver y calificar a sus alumnos --</p>';
+            cargarCriterios(); // Recargar todos los criterios
+        }
+    });
+</script>
+        <script src="main.js"></script>
+</body>
+</html>

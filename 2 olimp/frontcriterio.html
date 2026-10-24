@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guía de Criterios - Panel de Jurados</title>
+
+    <!-- 1. Cargar la librería oficial de Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <link rel="stylesheet" href="csscriterio.css">
+   
+
+</head>
+<body>
+     <div id="header-placeholder"></div>
+
+<div class="container">
+    <h2>Guía de Criterios de Evaluación</h2>
+    <p class="subtitle">Parámetros oficiales obtenidos desde la base de datos para el jurado.</p>
+
+    <div id="mensaje">Cargando criterios...</div>
+
+    <!-- Contenedor donde se cargarán dinámicamente los criterios -->
+    <div id="criteriosContainer" class="criterios-grid"></div>
+</div>
+
+<script>
+    // Configuración de credenciales de Supabase
+    const SUPABASE_URL = 'https://mcoxfiwmmcfughfybxij.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_izeEOV-__s9okF5yJMsMGw_-QNYnh7h';
+
+    // Inicializar cliente
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    window.addEventListener('DOMContentLoaded', async function() {
+        const mensajeBox = document.getElementById('mensaje');
+        const contenedor = document.getElementById('criteriosContainer');
+
+        try {
+            // Hacemos la consulta a la tabla 'criterios'
+            const { data: criteriosData, error } = await supabaseClient
+                .from('criterios') // <-- REVISAR SI ES 'criterios' O 'criterio'
+                .select('*')
+                .order('id_criterios', { ascending: true });
+
+            // ESTO LO MUESTRA EN LA CONSOLA DEL NAVEGADOR (F12)
+            console.log("Datos recibidos:", criteriosData);
+            console.log("Error de Supabase:", error);
+
+            if (error) {
+                mensajeBox.style.background = '#f8d7da';
+                mensajeBox.style.color = '#721c24';
+                mensajeBox.innerText = 'Error de Supabase: ' + error.message;
+                return;
+            }
+
+            if (!criteriosData || criteriosData.length === 0) {
+                mensajeBox.style.background = '#fff3cd';
+                mensajeBox.style.color = '#856404';
+                mensajeBox.innerText = 'La tabla está vacía o las Políticas RLS están bloqueando el acceso.';
+                return;
+            }
+
+            mensajeBox.style.display = 'none';
+
+            criteriosData.forEach((item, index) => {
+                const numeroCriterio = index + 1;
+                
+                const tarjeta = document.createElement('div');
+                tarjeta.className = 'criterio-card';
+                tarjeta.innerHTML = `
+                    <div class="criterio-header">Criterio ${numeroCriterio} (Año: ${item.año})</div>
+                    <div class="criterio-desc"><strong>Descripción:</strong> ${item.criterio}</div>
+                    ${item.proyecto ? `<div class="criterio-proyecto"><strong>Proyecto/Detalle:</strong> ${item.proyecto}</div>` : ''}
+                `;
+                contenedor.appendChild(tarjeta);
+            });
+
+        } catch (err) {
+            console.error("Excepción atrapada:", err);
+            mensajeBox.style.background = '#f8d7da';
+            mensajeBox.style.color = '#721c24';
+            mensajeBox.innerText = 'Ocurrió un error inesperado: ' + err.message;
+        }
+    });
+</script>
+    <script src="main.js"></script>
+</body>
+</html>

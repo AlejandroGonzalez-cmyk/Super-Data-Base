@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Acceso con Supabase</title>
+    <!-- 1. Cargar la librería de Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 50px; background-color: #f4f4f9; }
+        .caja { background: white; padding: 20px; border-radius: 8px; width: 300px; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); }
+        input { width: 100%; padding: 8px; margin: 8px 0 15px 0; box-sizing: border-box; }
+        button { background: #007bff; color: white; padding: 10px; border: none; width: 100%; cursor: pointer; border-radius: 4px; }
+        button:hover { background: #0056b3; }
+        #mensaje { margin-top: 15px; font-weight: bold; }
+    </style>
+</head>
+<body>
+        <div id="header-placeholder"></div>
+    <div class="caja">
+        <h2>Iniciar Sesión</h2>
+        
+        <!-- Formulario de Acceso -->
+        <form id="formLogin">
+            <label for="email">Correo electrónico:</label>
+            <input type="email" id="email" required>
+
+            <label for="password">Contraseña:</label>
+            <input type="password" id="password" required>
+
+            <button type="submit">Entrar</button>
+        </form>
+
+        <p id="mensaje"></p>
+    </div>
+
+    <script>
+        // 2. Configurar tus credenciales de Supabase
+        const SUPABASE_URL = 'https://mcoxfiwmmcfughfybxij.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_izeEOV-__s9okF5yJMsMGw_-QNYnh7h';
+
+        // Inicializar el cliente de Supabase
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // 3. Manejar el evento de inicio de sesión
+        document.getElementById('formLogin').addEventListener('submit', async function(e) {
+            e.preventDefault(); // Evita que la página se recargue
+
+            const emailInput = document.getElementById('email').value;
+            const passwordInput = document.getElementById('password').value;
+            const mensajeBox = document.getElementById('mensaje');
+
+            mensajeBox.style.color = 'blue';
+            mensajeBox.innerText = 'Verificando credenciales...';
+
+            // Consultar a Supabase para autenticar al usuario
+            const { data, error } = await supabaseClient.auth.signInWithPassword({
+                email: emailInput,
+                password: passwordInput,
+            });
+
+            if (error) {
+                mensajeBox.style.color = 'red';
+                mensajeBox.innerText = 'Error de acceso: ' + error.message;
+            } else {
+                mensajeBox.style.color = 'green';
+                mensajeBox.innerText = '¡Acceso exitoso! Bienvenido, ' + data.user.email;
+                
+                // Aquí puedes redirigirlo a otra página o cambiar la vista de tu HTML
+                // window.location.href = "dashboard.html"; 
+            }
+        });
+    </script>
+        <script src="main.js"></script>
+</body>
+</html>

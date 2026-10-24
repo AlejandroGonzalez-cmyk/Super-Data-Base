@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Notas - Portal de Alumnos</title>
+
+    <!-- 1. Cargar la librería oficial de Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="cssfrontestu.css">
+</head>
+<body>
+        <div id="header-placeholder"></div>
+<div class="container">
+    <h2>Mis Calificaciones</h2>
+
+    <div id="mensaje" style="background: #d1ecf1; color: #0c5460;">Cargando tus notas...</div>
+
+    <!-- TARJETA CON RESULTADOS DE LAS NOTAS (Visible al cargar los datos) -->
+    <div id="resultadoCard" class="resultado-card">
+        
+        <div class="section-title">Información del Alumno</div>
+        <div class="info-grid">
+            <div class="info-box">
+                <span>Alumno/a:</span>
+                <strong id="resNombre">-</strong>
+            </div>
+            <div class="info-box">
+                <span>Grupo:</span>
+                <strong id="resGrupo">-</strong>
+            </div>
+            <div class="info-box">
+                <span>Nota Individual:</span>
+                <strong id="resNotaIndividual" class="nota-destacada">-</strong>
+            </div>
+            <div class="info-box">
+                <span>Promedio Grupal:</span>
+                <strong id="resPromedioGrupal" class="nota-destacada">-</strong>
+            </div>
+        </div>
+
+        <div class="section-title">Desglose de Notas Grupales por Criterio</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Criterio</th>
+                    <th>Nota</th>
+                </tr>
+            </thead>
+            <tbody id="tablaNotasCriterio">
+                <!-- Se llena dinámicamente con JavaScript -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // Configuración de credenciales de Supabase
+    const SUPABASE_URL = 'https://mcoxfiwmmcfughfybxij.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_izeEOV-__s9okF5yJMsMGw_-QNYnh7h';
+
+    // Inicializar cliente
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Ejecutar la carga de datos automáticamente cuando la página abre
+    window.addEventListener('DOMContentLoaded', async function() {
+        const mensajeBox = document.getElementById('mensaje');
+        const resultadoCard = document.getElementById('resultadoCard');
+        const tablaBody = document.getElementById('tablaNotasCriterio');
+
+        try {
+            // 1. Obtener la sesión activa del usuario actual en Supabase
+            const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+
+            if (sessionError || !session) {
+                mostrarMensaje('No hay una sesión activa. Por favor, inicia sesión para ver tus notas.', 'red');
+                return;
+            }
+
+            const correoUsuario = session.user.email;
+
+            // 2. Buscar los datos del alumno en la tabla 'alumnos' usando el correo electrónico
+            // (Nota: Asegúrate de que la tabla 'alumnos' tenga una columna de correo para este vínculo automático)
+            const { data: alumnoData, error: alumnoError } = await supabaseClient
+                .from('alumnos')
+                .select(`
+                    id_alumno,
+                    nombre,
+                    apellido,
+                    nota_individual,
+                    id_grupos,
+                    grupos ( nombre )
+                `)
+                .eq('correo', correoUsuario)
+                .single();
+
+            if (alumnoError || !alumnoData) {
+                mostrarMensaje('No se encontró un registro de alumno asociado al correo: ' + correoUsuario, 'orange');
+                return;
+            }
+
+            // Mostrar información básica del alumno en la interfaz
+            document.getElementById('resNombre').innerText = `${alumnoData.nombre} ${alumnoData.apellido || ''}`;
+            document.getElementById('resGrupo').innerText = alumnoData.grupos ? alumnoData.grupos.nombre : 'Sin grupo asignado';
+            document.getElementById('resNotaIndividual').innerText = alumnoData.nota_individual !== null ? alumnoData.nota_individual : 'N/A';
+
+            // 3. Obtener notas grupales por criterio si el alumno pertenece a un grupo
+            if (alumnoData.id_grupos) {
+                const { data: notasData, error: notasError } = await supabaseClient
+                    .from('notas')
+                    .select(`
+                        nota,
+                        criterios ( criterio )
+                    `)
+                    .eq('id_grupos', alumnoData.id_grupos);
+
+                tablaBody.innerHTML = ''; // Limpiar tabla
+
+                if (notasData && notasData.length > 0) {
+                    let sumaNotas = 0;
+
+                    notasData.forEach(item => {
+                        sumaNotas += item.nota;
+                        const fila = `
+                            <tr>
+                                <td>${item.criterios ? item.criterios.criterio : 'Criterio sin nombre'}</td>
+                                <td><strong>${item.nota}</strong></td>
+                            </tr>
+                        `;
+                        tablaBody.innerHTML += fila;
+                    });
+
+                    // Calcular promedio grupal
+                    const promedio = (sumaNotas / notasData.length).toFixed(1);
+                    document.getElementById('resPromedioGrupal').innerText = promedio;
+                } else {
+                    tablaBody.innerHTML = '<tr><td colspan="2">Aún no hay notas grupales cargadas para este grupo.</td></tr>';
+                    document.getElementById('resPromedioGrupal').innerText = 'N/A';
+                }
+            } else {
+                tablaBody.innerHTML = '<tr><td colspan="2">No estás asignado a ningún grupo actualmente.</td></tr>';
+                document.getElementById('resPromedioGrupal').innerText = 'N/A';
+            }
+
+            // Ocultar mensaje de carga y mostrar la tarjeta de notas
+            mensajeBox.style.display = 'none';
+            resultadoCard.style.display = 'block';
+
+        } catch (err) {
+            mostrarMensaje('Ocurrió un error al cargar las calificaciones: ' + err.message, 'red');
+        }
+    });
+
+    function mostrarMensaje(texto, color) {
+        const mensajeBox = document.getElementById('mensaje');
+        mensajeBox.style.display = 'block';
+        mensajeBox.innerText = texto;
+        
+        if (color === 'red') {
+            mensajeBox.style.background = '#f8d7da';
+            mensajeBox.style.color = '#721c24';
+        } else if (color === 'orange') {
+            mensajeBox.style.background = '#fff3cd';
+            mensajeBox.style.color = '#856404';
+        }
+    }
+</script>
+      <script src="main.js"></script>
+</body>
+</html>
