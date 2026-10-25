@@ -15,7 +15,7 @@
     </style>
 </head>
 <body>
-        <div id="header-placeholder"></div>
+       
     <div class="caja">
         <h2>Iniciar Sesión</h2>
         
@@ -66,10 +66,15 @@
                 mensajeBox.innerText = '¡Acceso exitoso! Bienvenido, ' + data.user.email;
                 
                 // Aquí puedes redirigirlo a otra página o cambiar la vista de tu HTML
+                localStorage.setItem('sesionActiva', 'true');
+
+                setTimeout(() => {
+                  window.location.href = "frontnotagrup.html";
+                 }, 1000);
                 // window.location.href = "dashboard.html"; 
             }
         });
     </script>
-        <script src="main.js"></script>
+       
 </body>
 </html>
