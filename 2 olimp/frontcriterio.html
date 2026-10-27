@@ -32,7 +32,8 @@
 
     // Inicializar cliente
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
+    
+    //Creamos variables para poder modificar los elementos que tengan los IDs "mensaje" y "criteriosContainer"
     window.addEventListener('DOMContentLoaded', async function() {
         const mensajeBox = document.getElementById('mensaje');
         const contenedor = document.getElementById('criteriosContainer');
@@ -40,14 +41,15 @@
         try {
             // Hacemos la consulta a la tabla 'criterios'
             const { data: criteriosData, error } = await supabaseClient
-                .from('criterios') // <-- REVISAR SI ES 'criterios' O 'criterio'
+                .from('criterios')
                 .select('*')
                 .order('id_criterios', { ascending: true });
 
-            // ESTO LO MUESTRA EN LA CONSOLA DEL NAVEGADOR (F12)
+            // Mostramos los datos que se recibieron en de la base de datos y si hay algun error
             console.log("Datos recibidos:", criteriosData);
             console.log("Error de Supabase:", error);
 
+            //Si hay algun error se muestra en la parte inferior de la pagina
             if (error) {
                 mensajeBox.style.background = '#f8d7da';
                 mensajeBox.style.color = '#721c24';
@@ -55,6 +57,7 @@
                 return;
             }
 
+            //Si no se recibieron datos de la base de datos se hace saber en la caja de mensajes en la parte de abajo de la pagina
             if (!criteriosData || criteriosData.length === 0) {
                 mensajeBox.style.background = '#fff3cd';
                 mensajeBox.style.color = '#856404';
@@ -62,22 +65,27 @@
                 return;
             }
 
+            //Si no hay ningun mensaje que mostrar se deja vacia la caja de mensajes
             mensajeBox.style.display = 'none';
 
+            //Se crea un "div" para almacenar cada criterio de la BD
             criteriosData.forEach((item, index) => {
-                const numeroCriterio = index + 1;
-                
+                const numeroCriterio = index + 1; //Se crea un numerador para diferenciar los criterios
+
+                //Se crea un elemento para cada criterio
                 const tarjeta = document.createElement('div');
-                tarjeta.className = 'criterio-card';
+                tarjeta.className = 'criterio-card'; //Se define la clase del elemento
                 tarjeta.innerHTML = `
-                    <div class="criterio-header">Criterio ${numeroCriterio} (Año: ${item.año})</div>
+                    <div class="criterio-header">Criterio ${numeroCriterio} </div>
                     <div class="criterio-desc"><strong>Descripción:</strong> ${item.criterio}</div>
                     ${item.proyecto ? `<div class="criterio-proyecto"><strong>Proyecto/Detalle:</strong> ${item.proyecto}</div>` : ''}
                 `;
-                contenedor.appendChild(tarjeta);
+
+                
+                contenedor.appendChild(tarjeta); //Se agregan los elementos al elemento que tiene la clase "criteriosConteiner"
             });
 
-        } catch (err) {
+        } catch (err) { //Si ocurre un error durante el proceso muestra el error en el elemento con la clase "mensaje"
             console.error("Excepción atrapada:", err);
             mensajeBox.style.background = '#f8d7da';
             mensajeBox.style.color = '#721c24';
