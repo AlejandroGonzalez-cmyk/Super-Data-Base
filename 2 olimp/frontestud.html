@@ -45,6 +45,7 @@
                 <tr>
                     <th>Criterio</th>
                     <th>Nota</th>
+                    <th>Jurado</th>
                 </tr>
             </thead>
             <tbody id="tablaNotasCriterio">
@@ -110,7 +111,8 @@
                     .from('notas')
                     .select(`
                         nota,
-                        criterios ( criterio )
+                        criterios ( criterio ),
+                        jurado ( nombre, apellido )
                     `)
                     .eq('id_grupos', alumnoData.id_grupos);
 
@@ -125,6 +127,7 @@
                             <tr>
                                 <td>${item.criterios ? item.criterios.criterio : 'Criterio sin nombre'}</td>
                                 <td><strong>${item.nota}</strong></td>
+                                <td><strong>${item.jurado?.apellido}, ${item.jurado?.nombre}</strong></td>
                             </tr>
                         `;
                         tablaBody.innerHTML += fila;
