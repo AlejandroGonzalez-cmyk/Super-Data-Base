@@ -110,7 +110,7 @@
                     .from('notas')
                     .select(`
                         nota,
-                        criterios ( criterio )
+                        criterios ( criterio, Max_puntos )
                     `)
                     .eq('id_grupos', alumnoData.id_grupos);
 
@@ -120,7 +120,7 @@
                     let sumaNotas = 0;
 
                     notasData.forEach(item => {
-                        sumaNotas += item.nota;
+                        sumaNotas += (item.nota/item.criterios?.Max_puntos)*10;
                         const fila = `
                             <tr>
                                 <td>${item.criterios ? item.criterios.criterio : 'Criterio sin nombre'}</td>
