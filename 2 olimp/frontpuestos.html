@@ -1,70 +1,63 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Clasificación de eventos</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="cssfrontpuestos.css">
+
 </head>
 
 <body>
     <div id="header-placeholder"></div>
+    <h2>Puestos de clasificaciones</h2>
 
-    <h2>Clasificación de puntuaciones</h2>
-
-    <!-- Selector de evento -->
     <label for="evento">Seleccionar evento:</label>
     <select id="evento">
         <option value="">Cargando eventos...</option>
     </select>
 
-    <br><br>
+    <br>
 
-    <!-- Selector de año -->
     <label for="anio">Filtrar por año:</label>
     <select id="anio" disabled>
         <option value="">Todos los años</option>
     </select>
 
     <p id="estado">Conectando con Supabase...</p>
-
     <h3 id="tituloClasificacion"></h3>
 
-    <!-- Tabla de clasificación -->
-    <table border="1" cellpadding="8" cellspacing="0">
-        <thead id="cabecera">
-            <tr>
-                <th>Grupo</th>
-                <th>Total (de 100)</th>
-                <th>Puesto</th>
-            </tr>
-        </thead>
+    <div class="tabla-contenedor">
+        <table>
+            <thead id="cabecera">
+                <tr>
+                    <th>Grupo</th>
+                    <th>Total (de 100)</th>
+                    <th>Puesto</th>
+                </tr>
+            </thead>
+            <tbody id="clasificacion">
+                <tr>
+                    <td colspan="3">Esperando datos...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 
-        <tbody id="clasificacion">
-            <tr>
-                <td colspan="3">Esperando datos...</td>
-            </tr>
-        </tbody>
-    </table>
-
-    <!-- Librería de Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
-    // ==================================================
-    // 1. CONFIGURACIÓN DE SUPABASE
-    // ==================================================
+    const SUPABASE_URL =
+        'https://mcoxfiwmmcfughfybxij.supabase.co';
 
-    const SUPABASE_URL = 'https://mcoxfiwmmcfughfybxij.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_izeEOV-__s9okF5yJMsMGw_-QNYnh7h';
+    const SUPABASE_KEY =
+        'sb_publishable_izeEOV-__s9okF5yJMsMGw_-QNYnh7h';
 
-    const supabase = window.supabase.createClient(
+    const cliente = window.supabase.createClient(
         SUPABASE_URL,
         SUPABASE_KEY
     );
-
-    // ==================================================
-    // 2. ELEMENTOS DEL HTML
-    // ==================================================
 
     const selectorEvento = document.getElementById("evento");
     const selectorAnio = document.getElementById("anio");
@@ -72,443 +65,6 @@
     const cuerpoTabla = document.getElementById("clasificacion");
     const estado = document.getElementById("estado");
     const titulo = document.getElementById("tituloClasificacion");
-
-    // ==================================================
-    // 3. CARGAR EVENTOS
-    // ==================================================
-
-    async function cargarEventos() {
-        estado.textContent = "Cargando eventos...";
-
-        const { data, error } = await supabase
-            .from("eventos")
-            .select("id_eventos, nombre")
-            .order("id_eventos");
-
-        if (error) {
-            mostrarError("Error al cargar eventos: " + error.message);
-            return;
-        }
-
-        selectorEvento.replaceChildren();
-
-        const opcionInicial = document.createElement("option");
-        opcionInicial.value = "";
-        opcionInicial.textContent = "Selecciona un evento";
-        selectorEvento.appendChild(opcionInicial);
-
-        data.forEach(eventos => {
-            const opcion = document.createElement("option");
-
-            opcion.value = eventos.id_eventos;
-            opcion.textContent =
-                `${eventos.nombre} (ID: ${eventos.id_eventos})`;
-
-            selectorEvento.appendChild(opcion);
-        });
-
-        estado.textContent = data.length
-            ? "Selecciona un evento para ver su clasificación."
-            : "No hay eventos registrados.";
-    }
-
-    // ==================================================
-    // 4. CARGAR AÑOS DISPONIBLES PARA EL EVENTO
-    // ==================================================
-
-    async function cargarAnios(idEvento) {
-        selectorAnio.disabled = true;
-        selectorAnio.replaceChildren();
-
-        const opcionTodos = document.createElement("option");
-        opcionTodos.value = "";
-        opcionTodos.textContent = "Todos los años";
-        selectorAnio.appendChild(opcionTodos);
-
-        const { data, error } = await supabase
-            .from("grupos")
-            .select("año")
-            .eq("id_eventos", idEvento)
-            .not("año", "is", null)
-            .order("año");
-
-        if (error) {
-            throw error;
-        }
-
-        // Eliminar años repetidos y ordenarlos numéricamente
-        // cuando corresponda.
-        const anios = [
-            ...new Set(data.map(grupo => String(grupo.año)))
-        ].sort((a, b) =>
-            a.localeCompare(b, undefined, { numeric: true })
-        );
-
-        anios.forEach(anio => {
-            const opcion = document.createElement("option");
-
-            opcion.value = anio;
-            opcion.textContent = anio;
-
-            selectorAnio.appendChild(opcion);
-        });
-
-        selectorAnio.disabled = false;
-    }
-
-    // ==================================================
-    // 5. EVENTOS DE LOS SELECTORES
-    // ==================================================
-
-    selectorEvento.addEventListener("change", async () => {
-        const idEvento = selectorEvento.value;
-
-        if (!idEvento) {
-            selectorAnio.disabled = true;
-            titulo.textContent = "";
-            cuerpoTabla.replaceChildren();
-            estado.textContent = "Selecciona un evento.";
-            return;
-        }
-
-        try {
-            await cargarAnios(idEvento);
-
-            // Al cambiar de evento se muestran todos los años.
-            selectorAnio.value = "";
-
-            await cargarClasificacion(idEvento);
-        } catch (error) {
-            mostrarError(
-                "Error al cargar los años: " + error.message
-            );
-        }
-    });
-
-    selectorAnio.addEventListener("change", async () => {
-        if (selectorEvento.value) {
-            await cargarClasificacion(selectorEvento.value);
-        }
-    });
-
-    // ==================================================
-    // 6. CARGAR Y CALCULAR LA CLASIFICACIÓN
-    // ==================================================
-
-    async function cargarClasificacion(idEvento) {
-        estado.textContent = "Cargando clasificación...";
-        titulo.textContent = "";
-        cuerpoTabla.replaceChildren();
-
-        try {
-            // ------------------------------------------
-            // Consultar grupos del evento
-            // ------------------------------------------
-
-            let consultaGrupos = supabase
-                .from("grupos")
-                .select("id_grupos, nombre, año")
-                .eq("id_eventos", idEvento);
-
-            // Aplicar filtro de año si se ha seleccionado.
-            if (selectorAnio.value !== "") {
-                consultaGrupos = consultaGrupos.eq(
-                    "año",
-                    selectorAnio.value
-                );
-            }
-
-            const { data: grupos, error: errorGrupos } =
-                await consultaGrupos;
-
-            if (errorGrupos) throw errorGrupos;
-
-            // ------------------------------------------
-            // Consultar criterios y sus puntuaciones máximas
-            // ------------------------------------------
-
-            // Se intenta obtener el nombre del criterio.
-            // Si no existe la columna "nombre", se usa el ID.
-            let criterios;
-            let errorCriterios;
-
-            const resultadoConNombre = await supabase
-                .from("criterios")
-                .select("id_criterios, nombre, Max_puntos")
-                .order("id_criterios");
-
-            if (!resultadoConNombre.error) {
-                criterios = resultadoConNombre.data;
-            } else {
-                const resultadoBasico = await supabase
-                    .from("criterios")
-                    .select("id_criterios, nota_maxima")
-                    .order("id_criterios");
-
-                criterios = resultadoBasico.data;
-                errorCriterios = resultadoBasico.error;
-            }
-
-            if (errorCriterios) throw errorCriterios;
-
-            // Si no hay grupos, mostrar la cabecera igualmente.
-            generarCabecera(criterios || []);
-
-            if (!grupos || grupos.length === 0) {
-                estado.textContent =
-                    "No hay grupos para este evento y año.";
-                return;
-            }
-
-            // ------------------------------------------
-            // Consultar las notas de los grupos filtrados
-            // ------------------------------------------
-
-            const idsGrupos = grupos.map(grupo => grupo.id);
-
-            const { data: notas, error: errorNotas } =
-                await supabase
-                    .from("notas")
-                    .select(
-                        "id_notas, id_grupos, id_criterios, Max_puntos"
-                    )
-                    .in("id_grupos", idsGrupos);
-
-            if (errorNotas) throw errorNotas;
-
-            // ==================================================
-            // 7. PREPARAR LOS MÁXIMOS DE LOS CRITERIOS
-            // ==================================================
-
-            const maximos = new Map(
-                criterios.map(criterio => [
-                    String(criterio.id),
-                    Number(criterio.nota_maxima)
-                ])
-            );
-
-            // ==================================================
-            // 8. CALCULAR PORCENTAJE POR GRUPO Y CRITERIO
-            // ==================================================
-
-            const resultados = grupos.map(grupo => {
-                const porcentajes = {};
-
-                // Cada criterio empieza sin nota.
-                criterios.forEach(criterio => {
-                    porcentajes[String(criterio.id)] = null;
-                });
-
-                const notasGrupo = notas.filter(
-                    nota =>
-                        String(nota.id_grupo) === String(grupo.id)
-                );
-
-                notasGrupo.forEach(nota => {
-                    const idCriterio = String(nota.id_criterios);
-                    const maximo = maximos.get(idCriterio);
-                    const puntos = Number(nota.Max_puntos);
-
-                    // Ignorar notas nulas, no numéricas o inválidas.
-                    if (
-                        nota.Max_puntos === null ||
-                        nota.Max_puntos === undefined ||
-                        !Number.isFinite(puntos) ||
-                        !Number.isFinite(maximo) ||
-                        maximo <= 0 ||
-                        puntos < 0 ||
-                        puntos > maximo
-                    ) {
-                        return;
-                    }
-
-                    // Normalizar el resultado a una escala de 100.
-                    porcentajes[idCriterio] =
-                        (puntos / maximo) * 100;
-                });
-
-                // Promedio de los criterios evaluados.
-                const valoresValidos =
-                    Object.values(porcentajes).filter(
-                        valor =>
-                            valor !== null &&
-                            Number.isFinite(valor)
-                    );
-
-                const total = valoresValidos.length > 0
-                    ? valoresValidos.reduce(
-                        (suma, valor) => suma + valor,
-                        0
-                    ) / valoresValidos.length
-                    : null;
-
-                return {
-                    id: grupo.id_grupos,
-                    nombre: grupo.nombre,
-                    anio: grupo.año,
-                    porcentajes,
-                    total
-                };
-            });
-
-            // ==================================================
-            // 9. ORDENAR POR TOTAL DESCENDENTE
-            // ==================================================
-
-            resultados.sort((a, b) => {
-                if (a.total === null && b.total === null) {
-                    return a.nombre.localeCompare(b.nombre);
-                }
-
-                if (a.total === null) return 1;
-                if (b.total === null) return -1;
-
-                return (
-                    (b.total - a.total) ||
-                    a.nombre.localeCompare(b.nombre)
-                );
-            });
-
-            // ==================================================
-            // 10. MOSTRAR LA TABLA
-            // ==================================================
-
-            const opcionEvento =
-                selectorEvento.options[
-                    selectorEvento.selectedIndex
-                ];
-
-            const anioSeleccionado = selectorAnio.value;
-
-            titulo.textContent =
-                "Clasificación: " + opcionEvento.textContent +
-                (anioSeleccionado
-                    ? " — Año: " + anioSeleccionado
-                    : " — Todos los años");
-
-            cuerpoTabla.replaceChildren();
-
-            let posicionValida = 0;
-            let posicionAnterior = 0;
-            let totalAnterior = null;
-
-            resultados.forEach(grupo => {
-                const fila = document.createElement("tr");
-
-                let puesto = null;
-
-                if (grupo.total !== null) {
-                    posicionValida++;
-
-                    // Los grupos empatados comparten puesto.
-                    if (
-                        totalAnterior !== null &&
-                        Math.abs(grupo.total - totalAnterior) < 0.000001
-                    ) {
-                        puesto = posicionAnterior;
-                    } else {
-                        puesto = posicionValida;
-                    }
-
-                    totalAnterior = grupo.total;
-                    posicionAnterior = puesto;
-                }
-
-                // Primera columna: nombre del grupo.
-                agregarCelda(fila, grupo.nombre);
-
-                // Columnas dinámicas de los criterios.
-                criterios.forEach(criterio => {
-                    const porcentaje =
-                        grupo.porcentajes[String(criterio.id)];
-
-                    agregarCelda(
-                        fila,
-                        porcentaje === null
-                            ? "—"
-                            : porcentaje.toFixed(2) + "%"
-                    );
-                });
-
-                // Columna fija del total.
-                agregarCelda(
-                    fila,
-                    grupo.total === null
-                        ? "Sin notas"
-                        : grupo.total.toFixed(2)
-                );
-
-                // Última columna: puesto.
-                let textoPuesto = "—";
-
-                if (puesto === 1) {
-                    textoPuesto = "🥇 1.º";
-                } else if (puesto === 2) {
-                    textoPuesto = "🥈 2.º";
-                } else if (puesto === 3) {
-                    textoPuesto = "🥉 3.º";
-                } else if (puesto !== null) {
-                    textoPuesto = puesto + ".º";
-                }
-
-                agregarCelda(fila, textoPuesto);
-
-                // Destacar los tres primeros puestos.
-                if (
-                    puesto !== null &&
-                    puesto <= 3
-                ) {
-                    fila.style.fontWeight = "bold";
-                }
-
-                cuerpoTabla.appendChild(fila);
-            });
-
-            estado.textContent =
-                "Clasificación calculada correctamente. " +
-                resultados.length + " grupos.";
-
-        } catch (error) {
-            console.error(
-                "Error al cargar la clasificación:",
-                error
-            );
-
-            mostrarError(
-                "Error al consultar los datos: " + error.message
-            );
-        }
-    }
-
-    // ==================================================
-    // 11. GENERAR CABECERA DINÁMICA
-    // ==================================================
-
-    function generarCabecera(criterios) {
-        const fila = document.createElement("tr");
-
-        // Primera columna.
-        agregarCelda(fila, "Grupo", true);
-
-        // Una columna por cada criterio.
-        criterios.forEach(criterio => {
-            const nombre = criterio.nombre
-                ? criterio.nombre
-                : "Criterio " + criterio.id_criterios;
-
-            agregarCelda(fila, nombre, true);
-        });
-
-        // Columnas fijas al final.
-        agregarCelda(fila, "Total (de 100)", true);
-        agregarCelda(fila, "Puesto", true);
-
-        cabecera.replaceChildren(fila);
-    }
-
-    // ==================================================
-    // 12. FUNCIONES AUXILIARES
-    // ==================================================
 
     function agregarCelda(fila, texto, esCabecera = false) {
         const celda = document.createElement(
@@ -525,12 +81,360 @@
         cuerpoTabla.replaceChildren();
     }
 
-    // ==================================================
-    // 13. INICIAR
-    // ==================================================
+    function generarCabecera(criterios) {
+        const fila = document.createElement("tr");
+
+        agregarCelda(fila, "Grupo", true);
+
+        criterios.forEach(criterio => {
+            agregarCelda(
+                fila,
+                criterio.criterio ||
+                    "Criterio " + criterio.id_criterios,
+                true
+            );
+        });
+
+        agregarCelda(fila, "Total (de 100)", true);
+        agregarCelda(fila, "Puesto", true);
+
+        cabecera.replaceChildren(fila);
+    }
+
+    async function cargarEventos() {
+        estado.textContent = "Cargando eventos...";
+
+        const { data, error } = await cliente
+            .from("eventos")
+            .select("id_eventos, nombre")
+            .order("id_eventos");
+
+        if (error) {
+            mostrarError("Error al cargar eventos: " + error.message);
+            return;
+        }
+
+        selectorEvento.replaceChildren();
+
+        const inicial = document.createElement("option");
+        inicial.value = "";
+        inicial.textContent = "Selecciona un evento";
+        selectorEvento.appendChild(inicial);
+
+        (data || []).forEach(evento => {
+            const opcion = document.createElement("option");
+            opcion.value = evento.id_eventos;
+            opcion.textContent =
+                `${evento.nombre} (ID: ${evento.id_eventos})`;
+
+            selectorEvento.appendChild(opcion);
+        });
+
+        estado.textContent = data.length
+            ? "Selecciona un evento para ver su clasificación."
+            : "No hay eventos registrados.";
+    }
+
+    async function cargarAnios(idEvento) {
+        selectorAnio.disabled = true;
+        selectorAnio.replaceChildren();
+
+        const todos = document.createElement("option");
+        todos.value = "";
+        todos.textContent = "Todos los años";
+        selectorAnio.appendChild(todos);
+
+        const { data, error } = await cliente
+            .from("grupos")
+            .select("año")
+            .eq("id_eventos", idEvento)
+            .not("año", "is", null)
+            .order("año");
+
+        if (error) throw error;
+
+        const anios = [
+            ...new Set(
+                (data || []).map(g => String(g.año))
+            )
+        ].sort((a, b) =>
+            a.localeCompare(b, undefined, { numeric: true })
+        );
+
+        anios.forEach(anio => {
+            const opcion = document.createElement("option");
+            opcion.value = anio;
+            opcion.textContent = anio;
+            selectorAnio.appendChild(opcion);
+        });
+
+        selectorAnio.disabled = false;
+    }
+
+    selectorEvento.addEventListener("change", async () => {
+        const idEvento = selectorEvento.value;
+
+        titulo.textContent = "";
+        cuerpoTabla.replaceChildren();
+
+        if (!idEvento) {
+            selectorAnio.disabled = true;
+            estado.textContent = "Selecciona un evento.";
+            return;
+        }
+
+        try {
+            await cargarAnios(idEvento);
+            selectorAnio.value = "";
+            await cargarClasificacion(idEvento);
+        } catch (error) {
+            mostrarError("Error: " + error.message);
+        }
+    });
+
+    selectorAnio.addEventListener("change", async () => {
+        if (selectorEvento.value) {
+            await cargarClasificacion(selectorEvento.value);
+        }
+    });
+
+    async function cargarClasificacion(idEvento) {
+        estado.textContent = "Cargando clasificación...";
+        titulo.textContent = "";
+        cuerpoTabla.replaceChildren();
+
+        try {
+            // 1. Obtener los grupos del evento.
+            let consultaGrupos = cliente
+                .from("grupos")
+                .select("id_grupos, nombre, año")
+                .eq("id_eventos", idEvento);
+
+            if (selectorAnio.value !== "") {
+                consultaGrupos = consultaGrupos.eq(
+                    "año",
+                    selectorAnio.value
+                );
+            }
+
+            const { data: grupos, error: errorGrupos } =
+                await consultaGrupos;
+
+            if (errorGrupos) throw errorGrupos;
+
+            // 2. Obtener los criterios.
+            // Se utiliza el año del grupo cuando hay un año seleccionado.
+            let consultaCriterios = cliente
+                .from("criterios")
+                .select("id_criterios, Max_puntos, criterio, año")
+                .order("id_criterios");
+
+            if (selectorAnio.value !== "") {
+                consultaCriterios = consultaCriterios.eq(
+                    "año",
+                    selectorAnio.value
+                );
+            }
+
+            const { data: criterios, error: errorCriterios } =
+                await consultaCriterios;
+
+            if (errorCriterios) throw errorCriterios;
+
+            generarCabecera(criterios || []);
+
+            if (!grupos || grupos.length === 0) {
+                estado.textContent =
+                    "No hay grupos para este evento y año.";
+                return;
+            }
+
+            if (!criterios || criterios.length === 0) {
+                estado.textContent =
+                    "No hay criterios registrados para este año.";
+                return;
+            }
+
+            // 3. Obtener las notas de los grupos.
+            const idsGrupos = grupos.map(g => g.id_grupos);
+
+            const { data: notas, error: errorNotas } =
+                await cliente
+                    .from("notas")
+                    .select("id_notas, id_grupos, id_criterios, nota")
+                    .in("id_grupos", idsGrupos);
+
+            if (errorNotas) throw errorNotas;
+
+            // 4. Preparar los máximos de cada criterio.
+            const maximos = new Map();
+
+            criterios.forEach(criterio => {
+                maximos.set(
+                    String(criterio.id_criterios),
+                    Number(criterio.Max_puntos)
+                );
+            });
+
+            // 5. Calcular el porcentaje de cada grupo.
+            const resultados = grupos.map(grupo => {
+                const porcentajes = {};
+
+                criterios.forEach(criterio => {
+                    porcentajes[String(criterio.id_criterios)] = null;
+                });
+
+                const notasGrupo = (notas || []).filter(nota =>
+                    String(nota.id_grupos) === String(grupo.id_grupos)
+                );
+
+                notasGrupo.forEach(nota => {
+                    const idCriterio = String(nota.id_criterios);
+                    const maximo = maximos.get(idCriterio);
+                    const puntos = Number(nota.nota);
+
+                    if (
+                        nota.nota === null ||
+                        nota.nota === undefined ||
+                        nota.nota === "" ||
+                        !Number.isFinite(puntos) ||
+                        !Number.isFinite(maximo) ||
+                        maximo <= 0 ||
+                        puntos < 0 ||
+                        puntos > maximo
+                    ) {
+                        return;
+                    }
+
+                    porcentajes[idCriterio] =
+                        (puntos / maximo) * 100;
+                });
+
+                const valoresValidos = Object.values(porcentajes)
+                    .filter(valor =>
+                        valor !== null && Number.isFinite(valor)
+                    );
+
+                const total = valoresValidos.length
+                    ? valoresValidos.reduce(
+                        (suma, valor) => suma + valor, 0
+                    ) / valoresValidos.length
+                    : null;
+
+                return {
+                    id: grupo.id_grupos,
+                    nombre: grupo.nombre,
+                    anio: grupo.año,
+                    porcentajes,
+                    total
+                };
+            });
+
+            // 6. Ordenar por puntuación descendente.
+            resultados.sort((a, b) => {
+                if (a.total === null && b.total === null) {
+                    return a.nombre.localeCompare(b.nombre);
+                }
+
+                if (a.total === null) return 1;
+                if (b.total === null) return -1;
+
+                return b.total - a.total ||
+                    a.nombre.localeCompare(b.nombre);
+            });
+
+            const opcionEvento =
+                selectorEvento.options[selectorEvento.selectedIndex];
+
+            titulo.textContent =
+                "Clasificación: " + opcionEvento.textContent +
+                (selectorAnio.value
+                    ? " — Año: " + selectorAnio.value
+                    : " — Todos los años");
+
+            cuerpoTabla.replaceChildren();
+
+            let posicionValida = 0;
+            let posicionAnterior = 0;
+            let totalAnterior = null;
+
+            resultados.forEach(grupo => {
+                const fila = document.createElement("tr");
+                let puesto = null;
+
+                if (grupo.total !== null) {
+                    posicionValida++;
+
+                    // Los empates comparten puesto.
+                    if (
+                        totalAnterior !== null &&
+                        Math.abs(grupo.total - totalAnterior) < 0.000001
+                    ) {
+                        puesto = posicionAnterior;
+                    } else {
+                        puesto = posicionValida;
+                    }
+
+                    totalAnterior = grupo.total;
+                    posicionAnterior = puesto;
+                }
+
+                agregarCelda(fila, grupo.nombre);
+
+                criterios.forEach(criterio => {
+                    const porcentaje =
+                        grupo.porcentajes[
+                            String(criterio.id_criterios)
+                        ];
+
+                    agregarCelda(
+                        fila,
+                        porcentaje === null
+                            ? "—"
+                            : porcentaje.toFixed(2) + "%"
+                    );
+                });
+
+                agregarCelda(
+                    fila,
+                    grupo.total === null
+                        ? "Sin notas"
+                        : grupo.total.toFixed(2)
+                );
+
+                let textoPuesto = "—";
+
+                if (puesto === 1) {
+                    textoPuesto = "🥇 1.º";
+                    fila.classList.add("primero");
+                } else if (puesto === 2) {
+                    textoPuesto = "🥈 2.º";
+                    fila.classList.add("segundo");
+                } else if (puesto === 3) {
+                    textoPuesto = "🥉 3.º";
+                    fila.classList.add("tercero");
+                } else if (puesto !== null) {
+                    textoPuesto = puesto + ".º";
+                }
+
+                agregarCelda(fila, textoPuesto);
+                cuerpoTabla.appendChild(fila);
+            });
+
+            estado.textContent =
+                "Clasificación calculada correctamente. " +
+                resultados.length + " grupos.";
+
+        } catch (error) {
+            console.error("Error de clasificación:", error);
+            mostrarError(
+                "Error al consultar los datos: " + error.message
+            );
+        }
+    }
 
     cargarEventos();
     </script>
-
+    <script src="main.js"></script>
 </body>
 </html>

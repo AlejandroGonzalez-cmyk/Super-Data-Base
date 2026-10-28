@@ -1,0 +1,341 @@
+
+/* ==============================
+   ESTILO GENERAL
+============================== */
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: #f3f6fb;
+    color: #243047;
+    margin: 0;
+    padding: 35px 20px;
+    line-height: 1.5;
+}
+
+/* ==============================
+   CONTENEDOR PRINCIPAL
+============================== */
+
+body > h2,
+body > label,
+body > select,
+body > p,
+body > h3,
+.tabla-contenedor {
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+body > h2 {
+    text-align: center;
+    color: #173b6c;
+    font-size: 30px;
+    margin-top: 0;
+    margin-bottom: 30px;
+    font-weight: 700;
+}
+
+/* ==============================
+   ETIQUETAS
+============================== */
+
+label {
+    display: inline-block;
+    color: #344563;
+    font-size: 14px;
+    font-weight: 600;
+    margin-top: 12px;
+    margin-bottom: 7px;
+}
+
+/* ==============================
+   SELECTORES
+============================== */
+
+select {
+    display: block;
+    width: 100%;
+    max-width: 1100px;
+    padding: 12px 15px;
+    margin-bottom: 10px;
+
+    font-family: inherit;
+    font-size: 15px;
+    color: #243047;
+
+    background-color: #ffffff;
+    border: 1px solid #d4dce8;
+    border-radius: 9px;
+
+    cursor: pointer;
+    outline: none;
+
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+select:hover {
+    border-color: #7ba5e8;
+}
+
+select:focus {
+    border-color: #3478d4;
+    box-shadow: 0 0 0 3px rgba(52, 120, 212, 0.15);
+}
+
+select:disabled {
+    background-color: #e9edf3;
+    color: #8a94a5;
+    cursor: not-allowed;
+}
+
+/* ==============================
+   ESTADO DE CARGA
+============================== */
+
+#estado {
+    max-width: 1100px;
+    margin: 20px auto;
+    padding: 13px 16px;
+
+    background: #e8f1ff;
+    color: #24569a;
+
+    border-left: 4px solid #3478d4;
+    border-radius: 6px;
+
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* ==============================
+   TÍTULO DE CLASIFICACIÓN
+============================== */
+
+#tituloClasificacion {
+    max-width: 1100px;
+    margin: 28px auto 18px;
+
+    color: #173b6c;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+/* ==============================
+   CONTENEDOR DE LA TABLA
+============================== */
+
+.tabla-contenedor {
+    width: 100%;
+    overflow-x: auto;
+
+    background: #ffffff;
+    border-radius: 12px;
+
+    box-shadow: 0 5px 20px rgba(30, 50, 80, 0.08);
+    border: 1px solid #e2e8f0;
+
+    margin-top: 15px;
+}
+
+/* ==============================
+   TABLA
+============================== */
+
+table {
+    width: 100%;
+    min-width: 600px;
+    border-collapse: separate;
+    border-spacing: 0;
+
+    background: #ffffff;
+    font-size: 14px;
+}
+
+/* Encabezados */
+
+thead th {
+    background: #173b6c;
+    color: #ffffff;
+
+    padding: 15px 13px;
+    text-align: center;
+    white-space: nowrap;
+
+    font-weight: 600;
+    border: none;
+}
+
+/* Primera y última esquina */
+
+thead th:first-child {
+    text-align: left;
+    border-top-left-radius: 11px;
+}
+
+thead th:last-child {
+    border-top-right-radius: 11px;
+}
+
+/* Celdas */
+
+tbody td {
+    padding: 13px;
+    text-align: center;
+
+    border: none;
+    border-bottom: 1px solid #e8edf4;
+
+    color: #344563;
+    white-space: nowrap;
+}
+
+/* Nombre del grupo */
+
+tbody td:first-child {
+    text-align: left;
+    font-weight: 600;
+    color: #243b5a;
+}
+
+/* Filas alternadas */
+
+tbody tr:nth-child(even) {
+    background: #f7f9fc;
+}
+
+tbody tr:nth-child(odd) {
+    background: #ffffff;
+}
+
+/* Efecto al pasar el cursor */
+
+tbody tr:hover {
+    background: #edf4ff;
+    transition: background 0.2s ease;
+}
+
+/* ==============================
+   TRES PRIMEROS PUESTOS
+============================== */
+
+tbody tr.primero {
+    background: #fff4cc;
+}
+
+tbody tr.primero td {
+    color: #805b00;
+    font-weight: 700;
+}
+
+tbody tr.segundo {
+    background: #edf0f5;
+}
+
+tbody tr.segundo td {
+    color: #45546a;
+    font-weight: 700;
+}
+
+tbody tr.tercero {
+    background: #fbe8dc;
+}
+
+tbody tr.tercero td {
+    color: #854b2c;
+    font-weight: 700;
+}
+
+/* Mantener el color de las medallas al pasar el cursor */
+
+tbody tr.primero:hover {
+    background: #ffedac;
+}
+
+tbody tr.segundo:hover {
+    background: #e1e6ee;
+}
+
+tbody tr.tercero:hover {
+    background: #f6dac8;
+}
+
+/* ==============================
+   CELDAS SIN NOTA
+============================== */
+
+tbody td:empty {
+    color: #a0a9b8;
+}
+
+/* ==============================
+   RESPONSIVE: TABLET Y MÓVIL
+============================== */
+
+@media (max-width: 768px) {
+    body {
+        padding: 22px 12px;
+    }
+
+    body > h2 {
+        font-size: 24px;
+        margin-bottom: 22px;
+    }
+
+    label {
+        font-size: 13px;
+    }
+
+    select {
+        font-size: 14px;
+        padding: 11px;
+    }
+
+    #tituloClasificacion {
+        font-size: 18px;
+        margin-top: 22px;
+    }
+
+    #estado {
+        font-size: 13px;
+        padding: 11px 12px;
+    }
+
+    .tabla-contenedor {
+        border-radius: 9px;
+    }
+
+    table {
+        font-size: 12px;
+        min-width: 560px;
+    }
+
+    thead th,
+    tbody td {
+        padding: 10px 9px;
+    }
+}
+
+/* ==============================
+   MÓVILES PEQUEÑOS
+============================== */
+
+@media (max-width: 400px) {
+    body {
+        padding: 16px 9px;
+    }
+
+    body > h2 {
+        font-size: 21px;
+    }
+
+    #tituloClasificacion {
+        font-size: 16px;
+    }
+}
