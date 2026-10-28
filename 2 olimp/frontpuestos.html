@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <title>Clasificación de eventos</title>
+</head>
+<body>
+
+    <h2>Clasificación de puntuaciones</h2>
+
+    <label for="evento">Seleccionar evento:</label>
+    <select id="evento">
+        <option value="">Cargando eventos...</option>
+    </select>
+
+    <p id="estado">Conectando con la base de datos...</p>
+
+    <h3 id="tituloClasificacion"></h3>
+
+    <table border="1" cellpadding="8" cellspacing="0">
+        <thead>
+            <tr>
+                <th>Puesto</th>
+                <th>ID del grupo</th>
+                <th>Nombre del grupo</th>
+                <th>Promedio (%)</th>
+                <th>Criterios evaluados</th>
+            </tr>
+        </thead>
+        <tbody id="clasificacion">
+            <tr>
+                <td colspan="5">Esperando datos...</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Librería de Supabase -->
+
+    <script>
+    // =========================================
+    // 1. CONFIGURACIÓN DE SUPABASE
+    // =========================================
+
+    const SUPABASE_URL = 'https://mcoxfiwmmcfughfybxij.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_izeEOV-__s9okF5yJMsMGw_-QNYnh7h';
+
+    const supabase = window.supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_KEY
+    );
+
+    const selectorEvento = document.getElementById("evento");
+    const cuerpoTabla = document.getElementById("clasificacion");
+    const estado = document.getElementById("estado");
+    const titulo = document.getElementById("tituloClasificacion");
+
+    // =========================================
+    // 2. CARGAR EVENTOS
+    // =========================================
+
+    async function cargarEventos() {
+        estado.textContent = "Cargando eventos...";
+
+        const { data, error } = await supabase
+            .from("eventos")
+            .select("id, nombre")
+            .order("id");
+
+        if (error) {
+            mostrarError("No se pudieron cargar los eventos: "
+                + error.message);
+            return;
+        }
+
+        selectorEvento.replaceChildren();
+
+        const opcionInicial = document.createElement("option");
+        opcionInicial.value = "";
+        opcionInicial.textContent = "Selecciona un evento";
+        selectorEvento.appendChild(opcionInicial);
+
+        data.forEach(evento => {
+            const opcion = document.createElement("option");
+            opcion.value = evento.id;
+            opcion.textContent = `${evento.nombre} (ID: ${evento.id})`;
+            selectorEvento.appendChild(opcion);
+        });
+
+        estado.textContent = data.length
+            ? "Selecciona un evento para ver la clasificación."
+            : "No hay eventos registrados.";
+
+        cuerpoTabla.replaceChildren();
+    }
+
+    // =========================================
+    // 3. SELECCIONAR EVENTO Y CARGAR GRUPOS
+    // =========================================
+
+    selectorEvento.addEventListener("change", async () => {
+        const idEvento = selectorEvento.value;
+
+        if (!idEvento) {
+            titulo.textContent = "";
+            cuerpoTabla.replaceChildren();
+            estado.textContent = "Selecciona un evento.";
+            return;
+        }
+
+        await cargarClasificacion(idEvento);
+    });
+
+    async function cargarClasificacion(idEvento) {
+        estado.textContent = "Calculando clasificación...";
+        titulo.textContent = "";
+        cuerpoTabla.replaceChildren();
+
+        try {
+            // Consultar grupos del evento
+            const { data: grupos, error: errorGrupos } =
+                await supabase
+                    .from("grupos")
+                    .select("id, nombre")
+                    .eq("id_evento", idEvento);
+
+            if (errorGrupos) throw errorGrupos;
+
+            if (!grupos || grupos.length === 0) {
+                estado.textContent =
+                    "Este evento no tiene grupos registrados.";
+                return;
+            }
+
+            // Consultar notas de todos los grupos del evento
+            const idsGrupos = grupos.map(grupo => grupo.id);
+
+            const { data: notas, error: errorNotas } =
+                await supabase
+                    .from("notas")
+                    .select("id, id_grupo, id_criterios, Max_puntos")
+                    .in("id_grupo", idsGrupos);
+
+            if (errorNotas) throw errorNotas;
+
+            // Consultar máximos de los criterios
+            const { data: criterios, error: errorCriterios } =
+                await supabase
+                    .from("criterios")
+                    .select("id, nota_maxima");
+
+            if (errorCriterios) throw errorCriterios;
+
+            // Crear un mapa para consultar rápidamente los máximos
+            const maximos = new Map(
+                criterios.map(criterio => [
+                    String(criterio.id),
+                    Number(criterio.nota_maxima)
+                ])
+            );
+
+            // =====================================
+            // 4. CALCULAR EL PROMEDIO DE CADA GRUPO
+            // =====================================
+
+            const resultados = grupos.map(grupo => {
+                const notasGrupo = notas.filter(
+                    nota => String(nota.id_grupo) === String(grupo.id)
+                );
+
+                let sumaPorcentajes = 0;
+                let criteriosEvaluados = 0;
+
+                notasGrupo.forEach(nota => {
+                    const maximo = maximos.get(
+                        String(nota.id_criterios)
+                    );
+                    const puntos = Number(nota.Max_puntos);
+
+                    // Ignorar notas vacías, máximos inválidos
+                    // y puntuaciones fuera del rango permitido.
+                    if (
+                        nota.Max_puntos === null ||
+                        nota.Max_puntos === undefined ||
+                        !Number.isFinite(puntos) ||
+                        !Number.isFinite(maximo) ||
+                        maximo <= 0 ||
+                        puntos < 0 ||
+                        puntos > maximo
+                    ) {
+                        return;
+                    }
+
+                    const porcentaje = (puntos / maximo) * 100;
+
+                    sumaPorcentajes += porcentaje;
+                    criteriosEvaluados++;
+                });
+
+                const promedio = criteriosEvaluados > 0
+                    ? sumaPorcentajes / criteriosEvaluados
+                    : null;
+
+                return {
+                    id: grupo.id,
+                    nombre: grupo.nombre,
+                    promedio: promedio,
+                    criteriosEvaluados: criteriosEvaluados
+                };
+            });
+
+            // =====================================
+            // 5. ORDENAR DE MAYOR A MENOR
+            // =====================================
+
+            resultados.sort((a, b) => {
+                // Los grupos sin notas válidas van al final.
+                if (a.promedio === null) return 1;
+                if (b.promedio === null) return -1;
+
+                // En caso de empate, ordenar por nombre.
+                return (b.promedio - a.promedio) ||
+                    a.nombre.localeCompare(b.nombre);
+            });
+
+            // =====================================
+            // 6. MOSTRAR CLASIFICACIÓN
+            // =====================================
+
+            const nombreEvento =
+                selectorEvento.options[
+                    selectorEvento.selectedIndex
+                ].textContent;
+
+            titulo.textContent =
+                "Clasificación: " + nombreEvento;
+
+            cuerpoTabla.replaceChildren();
+
+            resultados.forEach((grupo, indice) => {
+                const fila = document.createElement("tr");
+
+                const puesto = indice + 1;
+
+                let textoPuesto = String(puesto);
+
+                if (grupo.promedio !== null && puesto === 1) {
+                    textoPuesto = "🥇 1.º";
+                } else if (
+                    grupo.promedio !== null && puesto === 2
+                ) {
+                    textoPuesto = "🥈 2.º";
+                } else if (
+                    grupo.promedio !== null && puesto === 3
+                ) {
+                    textoPuesto = "🥉 3.º";
+                }
+
+                const valores = [
+                    textoPuesto,
+                    grupo.id,
+                    grupo.nombre,
+                    grupo.promedio === null
+                        ? "Sin notas"
+                        : grupo.promedio.toFixed(2) + "%",
+                    grupo.criteriosEvaluados
+                ];
+
+                valores.forEach(valor => {
+                    const celda = document.createElement("td");
+                    celda.textContent = valor;
+                    fila.appendChild(celda);
+                });
+
+                // Destacar los tres primeros puestos con nota.
+                if (
+                    grupo.promedio !== null &&
+                    puesto <= 3
+                ) {
+                    fila.style.fontWeight = "bold";
+                }
+
+                cuerpoTabla.appendChild(fila);
+            });
+
+            estado.textContent =
+                "Clasificación calculada correctamente. " +
+                resultados.length + " grupos encontrados.";
+
+        } catch (error) {
+            console.error("Error al cargar clasificación:", error);
+            mostrarError(
+                "Error al consultar los datos: " + error.message
+            );
+        }
+    }
+
+    // =========================================
+    // 7. MOSTRAR ERRORES
+    // =========================================
+
+    function mostrarError(mensaje) {
+        estado.textContent = mensaje;
+        cuerpoTabla.replaceChildren();
+        titulo.textContent = "";
+    }
+
+    // =========================================
+    // 8. INICIAR PÁGINA
+    // =========================================
+
+    cargarEventos();
+    </script>
+
+</body>
+</html>
