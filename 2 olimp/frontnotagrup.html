@@ -66,13 +66,21 @@
     // Inicializar cliente
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Función para cargar TODOS los criterios al iniciar la página (sin filtrar por año)
-    async function cargarCriterios() {
+    // Función para cargar los criterios filtrados por año
+    async function cargarCriteriosPorAnio(anio) {
         const contenedorCriterios = document.getElementById('contenedor-criterios');
+        contenedorCriterios.innerHTML = '<p style="text-align: center; color: #6b7280; font-size: 0.9rem; padding: 10px;">Cargando criterios...</p>';
+
+        let query = supabaseClient.from('criterios').select('*');
         
-        const { data, error } = await supabaseClient
-            .from('criterios')
-            .select('id_criterios, criterio, proyecto');
+        // Si selecciona 7mo año, filtramos por el año 7. Si es 4, 5 o 6, filtramos para ese rango.
+        if (anio === '7') {
+            query = query.eq('año', 7);
+        } else {
+            query = query.in('año', [4, 5, 6]);
+        }
+
+        const { data, error } = await query.order('id_criterios', { ascending: true });
 
         if (error) {
             console.error('Error al cargar criterios:', error.message);
@@ -80,25 +88,30 @@
             return;
         }
 
-        if (data.length === 0) {
-            contenedorCriterios.innerHTML = '<p style="text-align: center; color: #6b7280; font-size: 0.9rem; padding: 10px;">No hay criterios registrados</p>';
+        if (!data || data.length === 0) {
+            contenedorCriterios.innerHTML = '<p style="text-align: center; color: #6b7280; font-size: 0.9rem; padding: 10px;">No hay criterios registrados para este año</p>';
             return;
         }
 
         let htmlCriterios = '';
-        data.forEach(c => {
+        data.forEach((c, index) => {
+            const numeroCriterio = index + 1;
+            // Si en tu tabla 'criterios' tienes una columna para el puntaje máximo (ej. max_puntos), 
+            // la usamos aquí. Si no, puedes ajustar el valor por defecto.
+            const maxPuntos = c.Max_puntos || 20; 
+
             htmlCriterios += `
                 <div class="alumno-row" style="margin-bottom: 15px;">
                     <div class="alumno-info">
-                        <strong>${c.criterio}</strong>
-                        <span style="font-size: 0.85rem; color: #6b7280;">Proyecto: ${c.proyecto ? c.proyecto : 'N/A'}</span>
+                        <strong>${numeroCriterio}. ${c.criterio}</strong>
+                        <span style="font-size: 0.85rem; color: #6b7280;">${c.proyecto ? 'Proyecto: ' + c.proyecto : ''} (Máx: ${maxPuntos} pts)</span>
                     </div>
                     <div class="alumno-input-container">
                         <input type="number" 
                                class="input-nota-criterio" 
                                data-id-criterio="${c.id_criterios}" 
-                               min="1" max="10" 
-                               placeholder="Nota (1-10)" 
+                               min="0" max="${maxPuntos}" 
+                               placeholder="Máx: ${maxPuntos}" 
                                required>
                     </div>
                 </div>
@@ -108,23 +121,26 @@
         contenedorCriterios.innerHTML = htmlCriterios;
     }
 
-    // Ejecutar la carga de todos los criterios al cargar la ventana
-    window.addEventListener('DOMContentLoaded', cargarCriterios);
-
-    // 1. EVENTO: Al cambiar el año, filtramos y cargamos los grupos
+    // 1. EVENTO: Al cambiar el año, filtramos y cargamos tanto los grupos como los criterios correspondientes
     document.getElementById('select_anio').addEventListener('change', async function(e) {
         const anioSeleccionado = e.target.value;
         const selectGrupos = document.getElementById('id_grupos');
         const contenedorAlumnos = document.getElementById('contenedor-alumnos');
+        const contenedorCriterios = document.getElementById('contenedor-criterios');
         
         selectGrupos.innerHTML = '<option value="">Cargando grupos...</option>';
         contenedorAlumnos.innerHTML = '<p style="text-align: center; color: #6b7280; font-size: 0.9rem; padding: 10px;">-- Seleccione un grupo para ver y calificar a sus alumnos --</p>';
 
         if (!anioSeleccionado) {
             selectGrupos.innerHTML = '<option value="">-- Primero seleccione un año --</option>';
+            contenedorCriterios.innerHTML = '<p style="text-align: center; color: #6b7280; font-size: 0.9rem; padding: 10px;">-- Seleccione un año para ver los criterios --</p>';
             return;
         }
 
+        // A. Cargar los criterios dinámicos según el año elegido
+        cargarCriteriosPorAnio(anioSeleccionado);
+
+        // B. Cargar los grupos correspondientes al año
         const { data, error } = await supabaseClient
             .from('grupos')
             .select('id_grupos, nombre, año')
@@ -151,7 +167,7 @@
         });
     });
 
-    // 2. EVENTO: Al cambiar de grupo, consultamos la tabla alumnos
+    // 2. EVENTO: Al cambiar de grupo, consultamos la tabla alumnos (se mantiene igual)
     document.getElementById('id_grupos').addEventListener('change', async function(e) {
         const grupoSeleccionado = e.target.value;
         const contenedorAlumnos = document.getElementById('contenedor-alumnos');
@@ -191,8 +207,8 @@
                         <input type="number" 
                                class="input-nota-alumno" 
                                data-id="${alumno.id_alumno}" 
-                               min="1" max="10" 
-                               placeholder="Nota (1-10)" 
+                               min="1" max="100" 
+                               placeholder="Nota (1-100)" 
                                value="${alumno.nota_individual !== null ? alumno.nota_individual : ''}" 
                                required>
                     </div>

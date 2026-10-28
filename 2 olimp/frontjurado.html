@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Jurados - Calificaciones por Año</title>
+    <!-- Cargar Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="cssnotagrup.css">
+</head>
+<body>
+    <!-- Menú de navegación unificado -->
+    <div id="header-placeholder"></div>
+
+<div class="container" style="max-width: 900px;">
+    <h2>Panel de Calificaciones - Vista de Jurados</h2>
+
+    <!-- SECCIÓN DE FILTRO POR AÑO -->
+    <div class="form-group" style="margin-bottom: 25px;">
+        <label for="select_anio_jurado"><strong>Seleccionar Año para Visualizar:</strong></label>
+        <select id="select_anio_jurado" style="padding: 10px; border-radius: 6px; border: 1px solid #d1dbd5; width: 100%;">
+            <option value="">-- Seleccione un año --</option>
+            <option value="4">4to Año</option>
+            <option value="5">5to Año</option>
+            <option value="6">6to Año</option>
+            <option value="7">7mo Año</option>
+        </select>
+    </div>
+
+    <div id="mensaje" style="text-align: center; color: #6b7280; padding: 15px;">-- Seleccione un año para ver los grupos y alumnos --</div>
+
+    <!-- CONTENEDOR DE RESULTADOS CATEGORIZADOS -->
+    <div id="contenedorResultados"></div>
+</div>
+
+<script>
+    const SUPABASE_URL = 'https://mcoxfiwmmcfughfybxij.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_izeEOV-__s9okF5yJMsMGw_-QNYnh7h';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    document.getElementById('select_anio_jurado').addEventListener('change', async function(e) {
+        const anioSeleccionado = e.target.value;
+        const contenedor = document.getElementById('contenedorResultados');
+        const mensajeBox = document.getElementById('mensaje');
+
+        contenedor.innerHTML = '';
+
+        if (!anioSeleccionado) {
+            mensajeBox.innerText = '-- Seleccione un año para ver los grupos y alumnos --';
+            return;
+        }
+
+        mensajeBox.innerText = 'Cargando calificaciones...';
+
+        try {
+            // 1. Obtener los grupos del año seleccionado
+            const { data: gruposData, error: gruposError } = await supabaseClient
+                .from('grupos')
+                .select('id_grupos, nombre')
+                .eq('año', anioSeleccionado);
+
+            if (gruposError) throw gruposError;
+
+            if (!gruposData || gruposData.length === 0) {
+                mensajeBox.innerText = 'No hay grupos registrados para este año.';
+                return;
+            }
+
+            mensajeBox.innerText = '';
+            let htmlGeneral = '';
+
+            // 2. Recorrer cada grupo para buscar sus alumnos y notas
+            for (const grupo of gruposData) {
+                // Buscar alumnos del grupo
+                const { data: alumnosData } = await supabaseClient
+                    .from('alumnos')
+                    .select('nombre, apellido, dni, nota_individual')
+                    .eq('id_grupos', grupo.id_grupos);
+
+                // Buscar notas grupales del grupo
+                const { data: notasGrupalesData } = await supabaseClient
+                    .from('notas')
+                    .select('nota, criterios(criterio)')
+                    .eq('id_grupos', grupo.id_grupos);
+
+                htmlGeneral += `
+                    <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                        <h3 style="color: #1f2937; margin-top: 0; border-bottom: 2px solid #2563eb; padding-bottom: 8px;">
+                            Grupo: ${grupo.nombre} (ID: ${grupo.id_grupos})
+                        </h3>
+
+                        <h4 style="color: #4b5563; margin-bottom: 5px;">Integrantes y Notas Individuales:</h4>
+                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+                            <thead>
+                                <tr style="background: #e5e7eb; text-align: left;">
+                                    <th style="padding: 8px;">Alumno/a</th>
+                                    <th style="padding: 8px;">DNI</th>
+                                    <th style="padding: 8px; text-align: center;">Nota Individual</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                if (alumnosData && alumnosData.length > 0) {
+                    alumnosData.forEach(al => {
+                        htmlGeneral += `
+                            <tr style="border-bottom: 1px solid #f3f4f6;">
+                                <td style="padding: 8px;">${al.apellido}, ${al.nombre}</td>
+                                <td style="padding: 8px;">${al.dni || 'N/A'}</td>
+                                <td style="padding: 8px; text-align: center;"><strong>${al.nota_individual !== null ? al.nota_individual : 'Sin calificar'}</strong></td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    htmlGeneral += `<tr><td colspan="3" style="padding: 8px; color: #6b7280;">No hay alumnos en este grupo.</td></tr>`;
+                }
+
+                htmlGeneral += `
+                            </tbody>
+                        </table>
+
+                        <h4 style="color: #4b5563; margin-bottom: 5px;">Calificaciones Grupales por Criterio:</h4>
+                        <ul style="margin: 0; padding-left: 20px; color: #374151;">
+                `;
+
+                if (notasGrupalesData && notasGrupalesData.length > 0) {
+                    notasGrupalesData.forEach(n => {
+                        const nombreCriterio = n.criterios ? n.criterios.criterio : 'Criterio';
+                        htmlGeneral += `<li>${nombreCriterio}: <strong>${n.nota}</strong></li>`;
+                    });
+                } else {
+                    htmlGeneral += `<li style="color: #6b7280;">Aún no hay notas grupales registradas para este grupo.</li>`;
+                }
+
+                htmlGeneral += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            contenedor.innerHTML = htmlGeneral;
+
+        } catch (err) {
+            mensajeBox.innerText = 'Error al cargar los datos: ' + err.message;
+            mensajeBox.style.color = 'red';
+        }
+    });
+</script>
+<script src="main.js"></script>
+</body>
+</html>

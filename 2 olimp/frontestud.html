@@ -89,21 +89,27 @@
                     apellido,
                     nota_individual,
                     id_grupos,
-                    grupos ( nombre )
+                    grupos:id_grupos ( nombre )
                 `)
                 .eq('correo', correoUsuario)
                 .single();
+               
 
             if (alumnoError || !alumnoData) {
                 mostrarMensaje('No se encontró un registro de alumno asociado al correo: ' + correoUsuario, 'orange');
                 return;
             }
 
+             console.log("Objeto alumnoData recibido:", alumnoData);
             // Mostrar información básica del alumno en la interfaz
             document.getElementById('resNombre').innerText = `${alumnoData.nombre} ${alumnoData.apellido || ''}`;
-            document.getElementById('resGrupo').innerText = alumnoData.grupos ? alumnoData.grupos.nombre : 'Sin grupo asignado';
-            document.getElementById('resNotaIndividual').innerText = alumnoData.nota_individual !== null ? alumnoData.nota_individual : 'N/A';
 
+            // Buscar el nombre del grupo de forma segura (sea objeto o array)
+            const nombreGrupo = alumnoData.grupos?.nombre || alumnoData.grupos?.[0]?.nombre || 'Sin grupo asignado';
+            document.getElementById('resGrupo').innerText = nombreGrupo;
+
+            document.getElementById('resNotaIndividual').innerText = alumnoData.nota_individual !== null ? alumnoData.nota_individual : '';
+          
             // 3. Obtener notas grupales por criterio si el alumno pertenece a un grupo
             if (alumnoData.id_grupos) {
                 const { data: notasData, error: notasError } = await supabaseClient

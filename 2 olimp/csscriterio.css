@@ -4,6 +4,7 @@ body {
             margin: 0;
             padding: 20px;
             color: #333;
+            background-image: url('fondoingr.png');
         }
         .container {
             max-width: 700px;

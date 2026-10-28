@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Guía de Criterios - Panel de Jurados</title>
 
+
     <!-- 1. Cargar la librería oficial de Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -19,79 +20,86 @@
     <h2>Guía de Criterios de Evaluación</h2>
     <p class="subtitle">Parámetros oficiales obtenidos desde la base de datos para el jurado.</p>
 
-    <div id="mensaje">Cargando criterios...</div>
+    <!-- Botones para filtrar por año -->
+    <div style="margin-bottom: 20px;">
+        <button onclick="cargarCriterios(4)" class="btn-filtro">Ver 4°,5° y 6° Año</button>
+        <button onclick="cargarCriterios(7)" class="btn-filtro">Ver 7° Año</button>
+    </div>
 
-    <!-- Contenedor donde se cargarán dinámicamente los criterios -->
+    <div id="mensaje">Cargando criterios...</div>
     <div id="criteriosContainer" class="criterios-grid"></div>
 </div>
 
 <script>
-    // Configuración de credenciales de Supabase
-    const SUPABASE_URL = 'https://mcoxfiwmmcfughfybxij.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_izeEOV-__s9okF5yJMsMGw_-QNYnh7h';
+   // Configuración de credenciales de Supabase
+const SUPABASE_URL = 'https://mcoxfiwmmcfughfybxij.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_izeEOV-__s9okF5yJMsMGw_-QNYnh7h';
 
-    // Inicializar cliente
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Función principal para cargar y filtrar por año
+async function cargarCriterios(anioSeleccionado) {
+    const mensajeBox = document.getElementById('mensaje');
+    const contenedor = document.getElementById('criteriosContainer');
     
-    //Creamos variables para poder modificar los elementos que tengan los IDs "mensaje" y "criteriosContainer"
-    window.addEventListener('DOMContentLoaded', async function() {
-        const mensajeBox = document.getElementById('mensaje');
-        const contenedor = document.getElementById('criteriosContainer');
+    // Limpiar el contenedor anterior y mostrar mensaje de carga
+    contenedor.innerHTML = '';
+    mensajeBox.style.display = 'block';
+    mensajeBox.style.background = '#e2e3e5';
+    mensajeBox.style.color = '#383d41';
+    mensajeBox.innerText = `Cargando criterios de ${anioSeleccionado}° año...`;
 
-        try {
-            // Hacemos la consulta a la tabla 'criterios'
-            const { data: criteriosData, error } = await supabaseClient
-                .from('criterios')
-                .select('*')
-                .order('id_criterios', { ascending: true });
+    try {
+        // Consulta a Supabase filtrando por el año recibido
+        const { data: criteriosData, error } = await supabaseClient
+            .from('criterios')
+            .select('*')
+            .eq('año', anioSeleccionado) // <--- Aquí se aplica el filtro por año
+            .order('id_criterios', { ascending: true });
 
-            // Mostramos los datos que se recibieron en de la base de datos y si hay algun error
-            console.log("Datos recibidos:", criteriosData);
-            console.log("Error de Supabase:", error);
-
-            //Si hay algun error se muestra en la parte inferior de la pagina
-            if (error) {
-                mensajeBox.style.background = '#f8d7da';
-                mensajeBox.style.color = '#721c24';
-                mensajeBox.innerText = 'Error de Supabase: ' + error.message;
-                return;
-            }
-
-            //Si no se recibieron datos de la base de datos se hace saber en la caja de mensajes en la parte de abajo de la pagina
-            if (!criteriosData || criteriosData.length === 0) {
-                mensajeBox.style.background = '#fff3cd';
-                mensajeBox.style.color = '#856404';
-                mensajeBox.innerText = 'La tabla está vacía o las Políticas RLS están bloqueando el acceso.';
-                return;
-            }
-
-            //Si no hay ningun mensaje que mostrar se deja vacia la caja de mensajes
-            mensajeBox.style.display = 'none';
-
-            //Se crea un "div" para almacenar cada criterio de la BD
-            criteriosData.forEach((item, index) => {
-                const numeroCriterio = index + 1; //Se crea un numerador para diferenciar los criterios
-
-                //Se crea un elemento para cada criterio
-                const tarjeta = document.createElement('div');
-                tarjeta.className = 'criterio-card'; //Se define la clase del elemento
-                tarjeta.innerHTML = `
-                    <div class="criterio-header">Criterio ${numeroCriterio} </div>
-                    <div class="criterio-desc"><strong>Descripción:</strong> ${item.criterio}</div>
-                    ${item.proyecto ? `<div class="criterio-proyecto"><strong>Proyecto/Detalle:</strong> ${item.proyecto}</div>` : ''}
-                `;
-
-                
-                contenedor.appendChild(tarjeta); //Se agregan los elementos al elemento que tiene la clase "criteriosConteiner"
-            });
-
-        } catch (err) { //Si ocurre un error durante el proceso muestra el error en el elemento con la clase "mensaje"
-            console.error("Excepción atrapada:", err);
+        if (error) {
             mensajeBox.style.background = '#f8d7da';
             mensajeBox.style.color = '#721c24';
-            mensajeBox.innerText = 'Ocurrió un error inesperado: ' + err.message;
+            mensajeBox.innerText = 'Error de Supabase: ' + error.message;
+            return;
         }
-    });
+
+        if (!criteriosData || criteriosData.length === 0) {
+            mensajeBox.style.background = '#fff3cd';
+            mensajeBox.style.color = '#856404';
+            mensajeBox.innerText = `No hay criterios cargados para el año ${anioSeleccionado}.`;
+            return;
+        }
+
+        // Ocultar mensaje si todo salió bien
+        mensajeBox.style.display = 'none';
+
+        // Pintar las tarjetas en pantalla
+        criteriosData.forEach((item, index) => {
+            const numeroCriterio = index + 1;
+            
+            const tarjeta = document.createElement('div');
+            tarjeta.className = 'criterio-card';
+            tarjeta.innerHTML = `
+                <div class="criterio-header">Criterio ${numeroCriterio} </div> <!--(Año: ${item.año})-->
+                <div class="criterio-desc"><strong>Descripción:</strong> ${item.criterio}</div>
+                ${item.proyecto ? `<div class="criterio-proyecto"><strong>Proyecto/Detalle:</strong> ${item.proyecto}</div>` : ''}
+            `;
+            contenedor.appendChild(tarjeta);
+        });
+
+    } catch (err) {
+        console.error("Excepción atrapada:", err);
+        mensajeBox.style.background = '#f8d7da';
+        mensajeBox.style.color = '#721c24';
+        mensajeBox.innerText = 'Ocurrió un error inesperado: ' + err.message;
+    }
+}
+
+// Opcional: Cargar por defecto el año 4 al abrir la página por primera vez
+window.addEventListener('DOMContentLoaded', function() {
+    cargarCriterios(4);
+});
 </script>
     <script src="main.js"></script>
 </body>

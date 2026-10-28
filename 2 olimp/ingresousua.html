@@ -5,17 +5,10 @@
     <title>Acceso con Supabase</title>
     <!-- 1. Cargar la librería de Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 50px; background-color: #f4f4f9; }
-        .caja { background: white; padding: 20px; border-radius: 8px; width: 300px; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); }
-        input { width: 100%; padding: 8px; margin: 8px 0 15px 0; box-sizing: border-box; }
-        button { background: #007bff; color: white; padding: 10px; border: none; width: 100%; cursor: pointer; border-radius: 4px; }
-        button:hover { background: #0056b3; }
-        #mensaje { margin-top: 15px; font-weight: bold; }
-    </style>
+      <link rel="stylesheet" href="cssingreso.css">
 </head>
 <body>
-       
+        
     <div class="caja">
         <h2>Iniciar Sesión</h2>
         
@@ -67,11 +60,26 @@
                 
                 // Aquí puedes redirigirlo a otra página o cambiar la vista de tu HTML
                 localStorage.setItem('sesionActiva', 'true');
+                
+                               
 
-                setTimeout(() => {
-                  window.location.href = "frontnotagrup.html";
-                 }, 1000);
-                // window.location.href = "dashboard.html"; 
+// 3. Consultas la tabla 'alumnos' para ver si ese correo existe ahí
+const { data: alumnoData, error: alumnoError } = await supabaseClient
+    .from('alumnos')
+    .select('id_alumno')
+    .eq('correo', emailInput)
+    .single();
+
+// 4. Validas el resultado
+if (alumnoData) {
+    // Si 'alumnoData' trae información, significa que SÍ es un alumno
+    window.location.href = 'frontestud.html';
+} else {
+    // Si no está en la tabla de alumnos, puede ser un profesor, admin o un usuario general
+    window.location.href = 'frontnotagrup.html'; // (o la página que corresponda)
+}
+
+               
             }
         });
     </script>
