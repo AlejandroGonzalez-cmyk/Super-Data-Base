@@ -73,13 +73,20 @@
 
         let query = supabaseClient.from('criterios').select('*');
         
-        // Si selecciona 7mo año, filtramos por el año 7. Si es 4, 5 o 6, filtramos para ese rango.
+        // Se filtra por año
         if (anio === '7') {
             query = query.eq('año', 7);
-        } else {
-            query = query.in('año', [4, 5, 6]);
+        } 
+        else if (anio === '6') {
+            query = query.eq('año', 6);
         }
-
+        else if (anio === '5') {
+            query = query.eq('año', 5);
+        }
+        else {
+            query = query.eq('año', 4);
+        }
+        
         const { data, error } = await query.order('id_criterios', { ascending: true });
 
         if (error) {
@@ -111,7 +118,7 @@
                                class="input-nota-criterio" 
                                data-id-criterio="${c.id_criterios}" 
                                min="0" max="${maxPuntos}" 
-                               placeholder="Máx: ${maxPuntos}" 
+                               placeholder="Máx: ${maxPuntos}"
                                required>
                     </div>
                 </div>
