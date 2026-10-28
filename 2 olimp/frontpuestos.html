@@ -12,21 +12,29 @@
 
 <body>
     <div id="header-placeholder"></div>
-    <h2>Puestos de clasificaciones</h2>
 
-    <label for="evento">Seleccionar evento:</label>
-    <select id="evento">
-        <option value="">Cargando eventos...</option>
-    </select>
+<main class="contenedor-principal">
 
-    <br>
+    <h2>Clasificación de puntuaciones</h2>
 
-    <label for="anio">Filtrar por año:</label>
-    <select id="anio" disabled>
-        <option value="">Todos los años</option>
-    </select>
+    <div class="filtros">
+        <div class="campo">
+            <label for="evento">Seleccionar evento</label>
+            <select id="evento">
+                <option value="">Cargando eventos...</option>
+            </select>
+        </div>
+
+        <div class="campo">
+            <label for="anio">Filtrar por año</label>
+            <select id="anio" disabled>
+                <option value="">Todos los años</option>
+            </select>
+        </div>
+    </div>
 
     <p id="estado">Conectando con Supabase...</p>
+
     <h3 id="tituloClasificacion"></h3>
 
     <div class="tabla-contenedor">
@@ -45,6 +53,9 @@
             </tbody>
         </table>
     </div>
+
+</main>
+
 
 
     <script>
