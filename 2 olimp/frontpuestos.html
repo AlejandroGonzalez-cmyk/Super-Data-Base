@@ -96,6 +96,7 @@
         const fila = document.createElement("tr");
 
         agregarCelda(fila, "Grupo", true);
+        agregarCelda(fila, "Puesto", true);
 
         criterios.forEach(criterio => {
             agregarCelda(
@@ -107,7 +108,6 @@
         });
 
         agregarCelda(fila, "Total (de 100)", true);
-        agregarCelda(fila, "Puesto", true);
 
         cabecera.replaceChildren(fila);
     }
