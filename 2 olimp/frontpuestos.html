@@ -42,8 +42,8 @@
             <thead id="cabecera">
                 <tr>
                     <th>Grupo</th>
-                    <th>Total (de 100)</th>
                     <th>Puesto</th>
+                    <th>Total (de 100)</th>
                 </tr>
             </thead>
             <tbody id="clasificacion">
@@ -59,6 +59,7 @@
 
 
     <script>
+        //Conexión a Supabase
     const SUPABASE_URL =
         'https://mcoxfiwmmcfughfybxij.supabase.co';
 
@@ -70,6 +71,7 @@
         SUPABASE_KEY
     );
 
+    //Guarda en una constante y obtiene el id de un elemento 
     const selectorEvento = document.getElementById("evento");
     const selectorAnio = document.getElementById("anio");
     const cabecera = document.getElementById("cabecera");
@@ -77,6 +79,8 @@
     const estado = document.getElementById("estado");
     const titulo = document.getElementById("tituloClasificacion");
 
+
+    //Crea una función para crear una celda dentro de la tabla
     function agregarCelda(fila, texto, esCabecera = false) {
         const celda = document.createElement(
             esCabecera ? "th" : "td"
@@ -92,6 +96,7 @@
         cuerpoTabla.replaceChildren();
     }
 
+    //Crea una función para generar un nombres para las columnas (Campos o Cabeceras serían)
     function generarCabecera(criterios) {
         const fila = document.createElement("tr");
 
@@ -112,6 +117,7 @@
         cabecera.replaceChildren(fila);
     }
 
+    //Función que se ejecuta de fondo para poder elegir los eventos
     async function cargarEventos() {
         estado.textContent = "Cargando eventos...";
 
@@ -146,6 +152,8 @@
             : "No hay eventos registrados.";
     }
 
+
+    //Parecida a la función para cargar los eventos, pero para los años y que busca todos los campos necesarios para realizar las cuentas correctas
     async function cargarAnios(idEvento) {
         selectorAnio.disabled = true;
         selectorAnio.replaceChildren();
@@ -209,13 +217,15 @@
         }
     });
 
+
+    //Función para cargar las clasificaciones según el evento
     async function cargarClasificacion(idEvento) {
         estado.textContent = "Cargando clasificación...";
         titulo.textContent = "";
         cuerpoTabla.replaceChildren();
 
         try {
-            // 1. Obtener los grupos del evento.
+            //1. Obtener los grupos del evento.
             let consultaGrupos = cliente
                 .from("grupos")
                 .select("id_grupos, nombre, año")
@@ -233,8 +243,8 @@
 
             if (errorGrupos) throw errorGrupos;
 
-            // 2. Obtener los criterios.
-            // Se utiliza el año del grupo cuando hay un año seleccionado.
+            //2. Obtener los criterios.
+            //Se utiliza el año del grupo cuando hay un año seleccionado.
             let consultaCriterios = cliente
                 .from("criterios")
                 .select("id_criterios, Max_puntos, criterio, año")
@@ -266,7 +276,7 @@
                 return;
             }
 
-            // 3. Obtener las notas de los grupos.
+            //3. Obtener las notas de los grupos.
             const idsGrupos = grupos.map(g => g.id_grupos);
 
             const { data: notas, error: errorNotas } =
@@ -277,7 +287,7 @@
 
             if (errorNotas) throw errorNotas;
 
-            // 4. Preparar los máximos de cada criterio.
+            //4. Preparar los máximos de cada criterio.
             const maximos = new Map();
 
             criterios.forEach(criterio => {
@@ -287,7 +297,7 @@
                 );
             });
 
-            // 5. Calcular el porcentaje de cada grupo.
+            //5. Calcular el porcentaje de cada grupo.
             const resultados = grupos.map(grupo => {
                 const porcentajes = {};
 
@@ -341,7 +351,7 @@
                 };
             });
 
-            // 6. Ordenar por puntuación descendente.
+            //6. Ordenar por puntuación descendente.
             resultados.sort((a, b) => {
                 if (a.total === null && b.total === null) {
                     return a.nombre.localeCompare(b.nombre);
@@ -369,6 +379,7 @@
             let posicionAnterior = 0;
             let totalAnterior = null;
 
+
             resultados.forEach(grupo => {
                 const fila = document.createElement("tr");
                 let puesto = null;
@@ -390,7 +401,28 @@
                     posicionAnterior = puesto;
                 }
 
+                //Agrega el nombre del grupo en la fila
                 agregarCelda(fila, grupo.nombre);
+
+                
+                //Destaca los 3 primeros puestos
+                let textoPuesto = "—";
+
+                if (puesto === 1) {
+                    textoPuesto = "🥇 1.º";
+                    fila.classList.add("primero");
+                } else if (puesto === 2) {
+                    textoPuesto = "🥈 2.º";
+                    fila.classList.add("segundo");
+                } else if (puesto === 3) {
+                    textoPuesto = "🥉 3.º";
+                    fila.classList.add("tercero");
+                } else if (puesto !== null) {
+                    textoPuesto = puesto + ".º";
+                }
+
+                //Agrega la celda con el puesto 
+                agregarCelda(fila, textoPuesto);
 
                 criterios.forEach(criterio => {
                     const porcentaje =
@@ -413,22 +445,6 @@
                         : grupo.total.toFixed(2)
                 );
 
-                let textoPuesto = "—";
-
-                if (puesto === 1) {
-                    textoPuesto = "🥇 1.º";
-                    fila.classList.add("primero");
-                } else if (puesto === 2) {
-                    textoPuesto = "🥈 2.º";
-                    fila.classList.add("segundo");
-                } else if (puesto === 3) {
-                    textoPuesto = "🥉 3.º";
-                    fila.classList.add("tercero");
-                } else if (puesto !== null) {
-                    textoPuesto = puesto + ".º";
-                }
-
-                agregarCelda(fila, textoPuesto);
                 cuerpoTabla.appendChild(fila);
             });
 
