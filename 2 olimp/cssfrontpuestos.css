@@ -261,3 +261,66 @@ tbody tr.tercero td {
         padding: 11px 9px;
     }
 }
+
+
+/* =====================================
+   TABLA DE CLASIFICACIONES
+===================================== */
+
+.tabla-contenedor {
+    width: 100%;
+    overflow-x: auto;
+    margin-top: 20px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: white;
+    text-align: center;
+}
+
+th,
+td {
+    border: 1px solid #999;
+    padding: 12px 15px;
+    min-width: 100px;
+}
+
+th {
+    background-color: #e8e8e8;
+    font-weight: bold;
+    color: #222;
+}
+
+/* Primera columna: criterios */
+
+th:first-child,
+td:first-child {
+    min-width: 220px;
+    text-align: left;
+    font-weight: 600;
+}
+
+/* Filas alternadas */
+
+tbody tr:nth-child(even) {
+    background-color: #f7f7f7;
+}
+
+/* Fila de puntuaciones totales */
+
+.fila-total {
+    background-color: #dedede !important;
+    font-weight: bold;
+    border-top: 2px solid #555;
+}
+
+.fila-total td {
+    padding: 15px;
+}
+
+.fila-total td:first-child {
+    text-transform: uppercase;
+}
+
