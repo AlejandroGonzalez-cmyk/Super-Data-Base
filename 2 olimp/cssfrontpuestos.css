@@ -263,29 +263,44 @@ tbody tr.tercero td {
 }
 
 
+
 /* =====================================
-   TABLA DE CLASIFICACIONES
+   TABLA DE CLASIFICACIONES RESPONSIVA
 ===================================== */
 
 .tabla-contenedor {
     width: 100%;
-    overflow-x: auto;
+    max-width: 100%;
+    overflow-x: hidden;
     margin-top: 20px;
 }
 
 table {
     width: 100%;
+    table-layout: fixed;
     border-collapse: collapse;
     background-color: white;
     text-align: center;
 }
 
+/* Todas las celdas */
+
 th,
 td {
     border: 1px solid #999;
-    padding: 12px 15px;
-    min-width: 100px;
+
+    padding: clamp(3px, 0.6vw, 12px);
+
+    font-size: clamp(7px, 0.8vw, 13px);
+
+    overflow-wrap: anywhere;
+    word-break: normal;
+
+    white-space: normal;
+    vertical-align: middle;
 }
+
+/* Encabezados */
 
 th {
     background-color: #e8e8e8;
@@ -297,9 +312,17 @@ th {
 
 th:first-child,
 td:first-child {
-    min-width: 220px;
+    width: 28%;
     text-align: left;
     font-weight: 600;
+}
+
+/* Columnas de los grupos */
+
+th:not(:first-child),
+td:not(:first-child) {
+    width: auto;
+    text-align: center;
 }
 
 /* Filas alternadas */
@@ -308,7 +331,7 @@ tbody tr:nth-child(even) {
     background-color: #f7f7f7;
 }
 
-/* Fila de puntuaciones totales */
+/* Fila de totales */
 
 .fila-total {
     background-color: #dedede !important;
@@ -317,10 +340,9 @@ tbody tr:nth-child(even) {
 }
 
 .fila-total td {
-    padding: 15px;
+    padding: clamp(4px, 0.7vw, 15px);
 }
 
 .fila-total td:first-child {
     text-transform: uppercase;
 }
-
