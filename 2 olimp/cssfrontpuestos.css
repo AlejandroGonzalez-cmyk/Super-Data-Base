@@ -6,7 +6,7 @@
 body {
     background-color: var(--bg-color);
     margin: 0;
-    padding: 35px 16px;
+    padding: 35px 20px;
     font-family: "Segoe UI", Arial, sans-serif;
     background-image: url('fondoingr.png');
     color: #243047;
@@ -16,7 +16,7 @@ body {
 
 .contenedor-principal {
     width: 100%;
-    max-width: 1150px;
+    max-width: 1500px;
     margin: 0 auto;
     padding: 32px;
     background: #ffffff;
