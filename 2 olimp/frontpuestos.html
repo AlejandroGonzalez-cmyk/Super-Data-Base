@@ -1,467 +1,745 @@
 
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clasificación de eventos</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="cssfrontpuestos.css">
 
+    <title>Clasificación de eventos</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <link rel="stylesheet" href="cssfrontpuestos.css">
 </head>
 
 <body>
+
     <div id="header-placeholder"></div>
 
-<main class="contenedor-principal">
+    <main class="contenedor-principal">
 
-    <h2>Clasificación de puntuaciones</h2>
+        <h2>Clasificación de puntuaciones</h2>
 
-    <div class="filtros">
-        <div class="campo">
-            <label for="evento">Seleccionar evento</label>
-            <select id="evento">
-                <option value="">Cargando eventos...</option>
-            </select>
+        <div class="filtros">
+
+            <div class="campo">
+                <label for="evento">Seleccionar evento</label>
+
+                <select id="evento">
+                    <option value="">Cargando eventos...</option>
+                </select>
+            </div>
+
+            <div class="campo">
+                <label for="anio">Filtrar por año</label>
+
+                <select id="anio" disabled>
+                    <option value="">Todos los años</option>
+                </select>
+            </div>
+
         </div>
 
-        <div class="campo">
-            <label for="anio">Filtrar por año</label>
-            <select id="anio" disabled>
-                <option value="">Todos los años</option>
-            </select>
+        <p id="estado">Conectando con Supabase...</p>
+
+        <h3 id="tituloClasificacion"></h3>
+
+        <div class="tabla-contenedor">
+
+            <table>
+
+                <thead id="cabecera">
+                    <tr>
+                        <th>Criterio</th>
+                        <th>Grupos</th>
+                    </tr>
+                </thead>
+
+                <tbody id="clasificacion">
+                    <tr>
+                        <td colspan="2">Esperando datos...</td>
+                    </tr>
+                </tbody>
+
+            </table>
+
         </div>
-    </div>
 
-    <p id="estado">Conectando con Supabase...</p>
-
-    <h3 id="tituloClasificacion"></h3>
-
-    <div class="tabla-contenedor">
-        <table>
-            <thead id="cabecera">
-                <tr>
-                    <th>Grupo</th>
-                    <th>Puesto</th>
-                    <th>Total (de 100)</th>
-                </tr>
-            </thead>
-            <tbody id="clasificacion">
-                <tr>
-                    <td colspan="3">Esperando datos...</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-
-</main>
-
+    </main>
 
 
     <script>
-        //Conexión a Supabase
-    const SUPABASE_URL =
-        'https://mcoxfiwmmcfughfybxij.supabase.co';
 
-    const SUPABASE_KEY =
-        'sb_publishable_izeEOV-__s9okF5yJMsMGw_-QNYnh7h';
+        // ==========================================
+        // 1. CONEXIÓN A SUPABASE
+        // ==========================================
 
-    const cliente = window.supabase.createClient(
-        SUPABASE_URL,
-        SUPABASE_KEY
-    );
+        const SUPABASE_URL =
+            'https://mcoxfiwmmcfughfybxij.supabase.co';
 
-    //Guarda en una constante y obtiene el id de un elemento 
-    const selectorEvento = document.getElementById("evento");
-    const selectorAnio = document.getElementById("anio");
-    const cabecera = document.getElementById("cabecera");
-    const cuerpoTabla = document.getElementById("clasificacion");
-    const estado = document.getElementById("estado");
-    const titulo = document.getElementById("tituloClasificacion");
+        const SUPABASE_KEY =
+            'sb_publishable_izeEOV-__s9okF5yJMsMGw_-QNYnh7h';
 
-
-    //Crea una función para crear una celda dentro de la tabla
-    function agregarCelda(fila, texto, esCabecera = false) {
-        const celda = document.createElement(
-            esCabecera ? "th" : "td"
+        const cliente = window.supabase.createClient(
+            SUPABASE_URL,
+            SUPABASE_KEY
         );
 
-        celda.textContent = texto;
-        fila.appendChild(celda);
-    }
 
-    function mostrarError(mensaje) {
-        estado.textContent = mensaje;
-        titulo.textContent = "";
-        cuerpoTabla.replaceChildren();
-    }
+        // ==========================================
+        // 2. OBTENER ELEMENTOS DEL HTML
+        // ==========================================
 
-    //Crea una función para generar un nombres para las columnas (Campos o Cabeceras serían)
-    function generarCabecera(criterios) {
-        const fila = document.createElement("tr");
+        const selectorEvento = document.getElementById("evento");
 
-        agregarCelda(fila, "Grupo", true);
-        agregarCelda(fila, "Puesto", true);
+        const selectorAnio = document.getElementById("anio");
 
-        criterios.forEach(criterio => {
-            agregarCelda(
-                fila,
-                criterio.criterio ||
-                    "Criterio " + criterio.id_criterios,
-                true
+        const cabecera = document.getElementById("cabecera");
+
+        const cuerpoTabla = document.getElementById("clasificacion");
+
+        const estado = document.getElementById("estado");
+
+        const titulo = document.getElementById("tituloClasificacion");
+
+
+        // ==========================================
+        // 3. FUNCIONES AUXILIARES
+        // ==========================================
+
+        // Crear una celda dentro de una fila.
+
+        function agregarCelda(fila, texto, esCabecera = false) {
+
+            const celda = document.createElement(
+                esCabecera ? "th" : "td"
             );
-        });
 
-        agregarCelda(fila, "Total (de 100)", true);
+            celda.textContent = texto;
 
-        cabecera.replaceChildren(fila);
-    }
-
-    //Función que se ejecuta de fondo para poder elegir los eventos
-    async function cargarEventos() {
-        estado.textContent = "Cargando eventos...";
-
-        const { data, error } = await cliente
-            .from("eventos")
-            .select("id_eventos, nombre")
-            .order("id_eventos");
-
-        if (error) {
-            mostrarError("Error al cargar eventos: " + error.message);
-            return;
+            fila.appendChild(celda);
         }
 
-        selectorEvento.replaceChildren();
 
-        const inicial = document.createElement("option");
-        inicial.value = "";
-        inicial.textContent = "Selecciona un evento";
-        selectorEvento.appendChild(inicial);
+        // Mostrar errores.
 
-        (data || []).forEach(evento => {
-            const opcion = document.createElement("option");
-            opcion.value = evento.id_eventos;
-            opcion.textContent =
-                `${evento.nombre} (ID: ${evento.id_eventos})`;
+        function mostrarError(mensaje) {
 
-            selectorEvento.appendChild(opcion);
-        });
+            estado.textContent = mensaje;
 
-        estado.textContent = data.length
-            ? "Selecciona un evento para ver su clasificación."
-            : "No hay eventos registrados.";
-    }
-
-
-    //Parecida a la función para cargar los eventos, pero para los años y que busca todos los campos necesarios para realizar las cuentas correctas
-    async function cargarAnios(idEvento) {
-        selectorAnio.disabled = true;
-        selectorAnio.replaceChildren();
-
-        const todos = document.createElement("option");
-        todos.value = "";
-        todos.textContent = "Todos los años";
-        selectorAnio.appendChild(todos);
-
-        const { data, error } = await cliente
-            .from("grupos")
-            .select("año")
-            .eq("id_eventos", idEvento)
-            .not("año", "is", null)
-            .order("año");
-
-        if (error) throw error;
-
-        const anios = [
-            ...new Set(
-                (data || []).map(g => String(g.año))
-            )
-        ].sort((a, b) =>
-            a.localeCompare(b, undefined, { numeric: true })
-        );
-
-        anios.forEach(anio => {
-            const opcion = document.createElement("option");
-            opcion.value = anio;
-            opcion.textContent = anio;
-            selectorAnio.appendChild(opcion);
-        });
-
-        selectorAnio.disabled = false;
-    }
-
-    selectorEvento.addEventListener("change", async () => {
-        const idEvento = selectorEvento.value;
-
-        titulo.textContent = "";
-        cuerpoTabla.replaceChildren();
-
-        if (!idEvento) {
-            selectorAnio.disabled = true;
-            estado.textContent = "Selecciona un evento.";
-            return;
-        }
-
-        try {
-            await cargarAnios(idEvento);
-            selectorAnio.value = "";
-            await cargarClasificacion(idEvento);
-        } catch (error) {
-            mostrarError("Error: " + error.message);
-        }
-    });
-
-    selectorAnio.addEventListener("change", async () => {
-        if (selectorEvento.value) {
-            await cargarClasificacion(selectorEvento.value);
-        }
-    });
-
-
-    //Función para cargar las clasificaciones según el evento
-    async function cargarClasificacion(idEvento) {
-        estado.textContent = "Cargando clasificación...";
-        titulo.textContent = "";
-        cuerpoTabla.replaceChildren();
-
-        try {
-            //1. Obtener los grupos del evento.
-            let consultaGrupos = cliente
-                .from("grupos")
-                .select("id_grupos, nombre, año")
-                .eq("id_eventos", idEvento);
-
-            if (selectorAnio.value !== "") {
-                consultaGrupos = consultaGrupos.eq(
-                    "año",
-                    selectorAnio.value
-                );
-            }
-
-            const { data: grupos, error: errorGrupos } =
-                await consultaGrupos;
-
-            if (errorGrupos) throw errorGrupos;
-
-            //2. Obtener los criterios.
-            //Se utiliza el año del grupo cuando hay un año seleccionado.
-            let consultaCriterios = cliente
-                .from("criterios")
-                .select("id_criterios, Max_puntos, criterio, año")
-                .order("id_criterios");
-
-            if (selectorAnio.value !== "") {
-                consultaCriterios = consultaCriterios.eq(
-                    "año",
-                    selectorAnio.value
-                );
-            }
-
-            const { data: criterios, error: errorCriterios } =
-                await consultaCriterios;
-
-            if (errorCriterios) throw errorCriterios;
-
-            generarCabecera(criterios || []);
-
-            if (!grupos || grupos.length === 0) {
-                estado.textContent =
-                    "No hay grupos para este evento y año.";
-                return;
-            }
-
-            if (!criterios || criterios.length === 0) {
-                estado.textContent =
-                    "No hay criterios registrados para este año.";
-                return;
-            }
-
-            //3. Obtener las notas de los grupos.
-            const idsGrupos = grupos.map(g => g.id_grupos);
-
-            const { data: notas, error: errorNotas } =
-                await cliente
-                    .from("notas")
-                    .select("id_notas, id_grupos, id_criterios, nota")
-                    .in("id_grupos", idsGrupos);
-
-            if (errorNotas) throw errorNotas;
-
-            //4. Preparar los máximos de cada criterio.
-            const maximos = new Map();
-
-            criterios.forEach(criterio => {
-                maximos.set(
-                    String(criterio.id_criterios),
-                    Number(criterio.Max_puntos)
-                );
-            });
-
-            //5. Calcular el porcentaje de cada grupo.
-            const resultados = grupos.map(grupo => {
-                const porcentajes = {};
-
-                criterios.forEach(criterio => {
-                    porcentajes[String(criterio.id_criterios)] = null;
-                });
-
-                const notasGrupo = (notas || []).filter(nota =>
-                    String(nota.id_grupos) === String(grupo.id_grupos)
-                );
-
-                notasGrupo.forEach(nota => {
-                    const idCriterio = String(nota.id_criterios);
-                    const maximo = maximos.get(idCriterio);
-                    const puntos = Number(nota.nota);
-
-                    if (
-                        nota.nota === null ||
-                        nota.nota === undefined ||
-                        nota.nota === "" ||
-                        !Number.isFinite(puntos) ||
-                        !Number.isFinite(maximo) ||
-                        maximo <= 0 ||
-                        puntos < 0 ||
-                        puntos > maximo
-                    ) {
-                        return;
-                    }
-
-                    porcentajes[idCriterio] =
-                        (puntos / maximo) * 100;
-                });
-
-                const valoresValidos = Object.values(porcentajes)
-                    .filter(valor =>
-                        valor !== null && Number.isFinite(valor)
-                    );
-
-                const total = valoresValidos.length
-                    ? valoresValidos.reduce(
-                        (suma, valor) => suma + valor, 0
-                    ) / valoresValidos.length
-                    : null;
-
-                return {
-                    id: grupo.id_grupos,
-                    nombre: grupo.nombre,
-                    anio: grupo.año,
-                    porcentajes,
-                    total
-                };
-            });
-
-            //6. Ordenar por puntuación descendente.
-            resultados.sort((a, b) => {
-                if (a.total === null && b.total === null) {
-                    return a.nombre.localeCompare(b.nombre);
-                }
-
-                if (a.total === null) return 1;
-                if (b.total === null) return -1;
-
-                return b.total - a.total ||
-                    a.nombre.localeCompare(b.nombre);
-            });
-
-            const opcionEvento =
-                selectorEvento.options[selectorEvento.selectedIndex];
-
-            titulo.textContent =
-                "Clasificación: " + opcionEvento.textContent +
-                (selectorAnio.value
-                    ? " — Año: " + selectorAnio.value
-                    : " — Todos los años");
+            titulo.textContent = "";
 
             cuerpoTabla.replaceChildren();
-
-            let posicionValida = 0;
-            let posicionAnterior = 0;
-            let totalAnterior = null;
+        }
 
 
-            resultados.forEach(grupo => {
-                const fila = document.createElement("tr");
-                let puesto = null;
+        // ==========================================
+        // 4. GENERAR CABECERA DE LA TABLA
+        // ==========================================
 
-                if (grupo.total !== null) {
-                    posicionValida++;
+        function generarCabecera(grupos) {
 
-                    // Los empates comparten puesto.
-                    if (
-                        totalAnterior !== null &&
-                        Math.abs(grupo.total - totalAnterior) < 0.000001
-                    ) {
-                        puesto = posicionAnterior;
-                    } else {
-                        puesto = posicionValida;
-                    }
+            const fila = document.createElement("tr");
 
-                    totalAnterior = grupo.total;
-                    posicionAnterior = puesto;
-                }
+            agregarCelda(fila, "Criterio", true);
 
-                //Agrega el nombre del grupo en la fila
-                agregarCelda(fila, grupo.nombre);
-
-                
-                //Destaca los 3 primeros puestos
-                let textoPuesto = "—";
-
-                if (puesto === 1) {
-                    textoPuesto = "🥇 1.º";
-                    fila.classList.add("primero");
-                } else if (puesto === 2) {
-                    textoPuesto = "🥈 2.º";
-                    fila.classList.add("segundo");
-                } else if (puesto === 3) {
-                    textoPuesto = "🥉 3.º";
-                    fila.classList.add("tercero");
-                } else if (puesto !== null) {
-                    textoPuesto = puesto + ".º";
-                }
-
-                //Agrega la celda con el puesto 
-                agregarCelda(fila, textoPuesto);
-
-                criterios.forEach(criterio => {
-                    const porcentaje =
-                        grupo.porcentajes[
-                            String(criterio.id_criterios)
-                        ];
-
-                    agregarCelda(
-                        fila,
-                        porcentaje === null
-                            ? "—"
-                            : porcentaje.toFixed(2) + "%"
-                    );
-                });
+            grupos.forEach(grupo => {
 
                 agregarCelda(
                     fila,
-                    grupo.total === null
-                        ? "Sin notas"
-                        : grupo.total.toFixed(2)
+                    grupo.nombre,
+                    true
                 );
 
-                cuerpoTabla.appendChild(fila);
             });
 
-            estado.textContent =
-                "Clasificación calculada correctamente. " +
-                resultados.length + " grupos.";
-
-        } catch (error) {
-            console.error("Error de clasificación:", error);
-            mostrarError(
-                "Error al consultar los datos: " + error.message
-            );
+            cabecera.replaceChildren(fila);
         }
-    }
 
-    cargarEventos();
+
+        // ==========================================
+        // 5. CARGAR EVENTOS
+        // ==========================================
+
+        async function cargarEventos() {
+
+            estado.textContent = "Cargando eventos...";
+
+            const { data, error } = await cliente
+                .from("eventos")
+                .select("id_eventos, nombre")
+                .order("id_eventos");
+
+            if (error) {
+
+                mostrarError(
+                    "Error al cargar eventos: " + error.message
+                );
+
+                return;
+            }
+
+            selectorEvento.replaceChildren();
+
+            const inicial = document.createElement("option");
+
+            inicial.value = "";
+
+            inicial.textContent = "Selecciona un evento";
+
+            selectorEvento.appendChild(inicial);
+
+
+            (data || []).forEach(evento => {
+
+                const opcion = document.createElement("option");
+
+                opcion.value = evento.id_eventos;
+
+                opcion.textContent =
+                    `${evento.nombre} (ID: ${evento.id_eventos})`;
+
+                selectorEvento.appendChild(opcion);
+
+            });
+
+
+            estado.textContent = data.length
+                ? "Selecciona un evento para ver su clasificación."
+                : "No hay eventos registrados.";
+        }
+
+
+        // ==========================================
+        // 6. CARGAR AÑOS DISPONIBLES
+        // ==========================================
+
+        async function cargarAnios(idEvento) {
+
+            selectorAnio.disabled = true;
+
+            selectorAnio.replaceChildren();
+
+            const todos = document.createElement("option");
+
+            todos.value = "";
+
+            todos.textContent = "Todos los años";
+
+            selectorAnio.appendChild(todos);
+
+
+            const { data, error } = await cliente
+                .from("grupos")
+                .select("año")
+                .eq("id_eventos", idEvento)
+                .not("año", "is", null)
+                .order("año");
+
+            if (error) throw error;
+
+
+            const anios = [
+                ...new Set(
+                    (data || []).map(g => String(g.año))
+                )
+            ].sort((a, b) =>
+                a.localeCompare(b, undefined, { numeric: true })
+            );
+
+
+            anios.forEach(anio => {
+
+                const opcion = document.createElement("option");
+
+                opcion.value = anio;
+
+                opcion.textContent = anio;
+
+                selectorAnio.appendChild(opcion);
+
+            });
+
+            selectorAnio.disabled = false;
+        }
+
+
+        // ==========================================
+        // 7. EVENTO: CAMBIAR EVENTO
+        // ==========================================
+
+        selectorEvento.addEventListener("change", async () => {
+
+            const idEvento = selectorEvento.value;
+
+            titulo.textContent = "";
+
+            cuerpoTabla.replaceChildren();
+
+            if (!idEvento) {
+
+                selectorAnio.disabled = true;
+
+                estado.textContent = "Selecciona un evento.";
+
+                return;
+            }
+
+
+            try {
+
+                await cargarAnios(idEvento);
+
+                selectorAnio.value = "";
+
+                await cargarClasificacion(idEvento);
+
+            } catch (error) {
+
+                mostrarError("Error: " + error.message);
+
+            }
+
+        });
+
+
+        // ==========================================
+        // 8. EVENTO: CAMBIAR AÑO
+        // ==========================================
+
+        selectorAnio.addEventListener("change", async () => {
+
+            if (selectorEvento.value) {
+
+                await cargarClasificacion(
+                    selectorEvento.value
+                );
+
+            }
+
+        });
+
+
+        // ==========================================
+        // 9. CARGAR Y CALCULAR CLASIFICACIÓN
+        // ==========================================
+
+        async function cargarClasificacion(idEvento) {
+
+            estado.textContent = "Cargando clasificación...";
+
+            titulo.textContent = "";
+
+            cuerpoTabla.replaceChildren();
+
+
+            try {
+
+                // ----------------------------------
+                // PASO 1: OBTENER LOS GRUPOS
+                // ----------------------------------
+
+                let consultaGrupos = cliente
+                    .from("grupos")
+                    .select("id_grupos, nombre, año")
+                    .eq("id_eventos", idEvento);
+
+
+                if (selectorAnio.value !== "") {
+
+                    consultaGrupos = consultaGrupos.eq(
+                        "año",
+                        selectorAnio.value
+                    );
+
+                }
+
+
+                const { data: grupos, error: errorGrupos } =
+                    await consultaGrupos;
+
+                if (errorGrupos) throw errorGrupos;
+
+
+                // ----------------------------------
+                // PASO 2: OBTENER LOS CRITERIOS
+                // ----------------------------------
+
+                let consultaCriterios = cliente
+                    .from("criterios")
+                    .select("id_criterios, Max_puntos, criterio, año")
+                    .order("id_criterios");
+
+
+                if (selectorAnio.value !== "") {
+
+                    consultaCriterios = consultaCriterios.eq(
+                        "año",
+                        selectorAnio.value
+                    );
+
+                }
+
+
+                const { data: criterios, error: errorCriterios } =
+                    await consultaCriterios;
+
+                if (errorCriterios) throw errorCriterios;
+
+
+                // ----------------------------------
+                // PASO 3: VERIFICAR DATOS
+                // ----------------------------------
+
+                if (!grupos || grupos.length === 0) {
+
+                    estado.textContent =
+                        "No hay grupos para este evento y año.";
+
+                    return;
+                }
+
+
+                if (!criterios || criterios.length === 0) {
+
+                    estado.textContent =
+                        "No hay criterios registrados para este año.";
+
+                    return;
+                }
+
+
+                // ----------------------------------
+                // PASO 4: OBTENER LAS NOTAS
+                // ----------------------------------
+
+                const idsGrupos = grupos.map(g => g.id_grupos);
+
+
+                const { data: notas, error: errorNotas } =
+                    await cliente
+                        .from("notas")
+                        .select("id_grupos, id_criterios, nota")
+                        .in("id_grupos", idsGrupos);
+
+
+                if (errorNotas) throw errorNotas;
+
+
+                // ----------------------------------
+                // PASO 5: CALCULAR LAS PUNTUACIONES
+                // ----------------------------------
+
+                const resultados = grupos.map(grupo => {
+
+                    const puntuaciones = {};
+
+
+                    // Inicializar todos los criterios.
+
+                    criterios.forEach(criterio => {
+
+                        puntuaciones[
+                            String(criterio.id_criterios)
+                        ] = null;
+
+                    });
+
+
+                    // Obtener las notas del grupo.
+
+                    const notasGrupo = (notas || []).filter(nota =>
+
+                        String(nota.id_grupos) ===
+                        String(grupo.id_grupos)
+
+                    );
+
+
+                    // Guardar las puntuaciones.
+
+                    notasGrupo.forEach(nota => {
+
+                        const idCriterio =
+                            String(nota.id_criterios);
+
+
+                        const criterio = criterios.find(c =>
+
+                            String(c.id_criterios) === idCriterio
+
+                        );
+
+
+                        if (!criterio) return;
+
+
+                        const puntos = Number(nota.nota);
+
+                        const maximo = Number(criterio.Max_puntos);
+
+
+                        // Validar las notas.
+
+                        if (
+                            nota.nota === null ||
+                            nota.nota === undefined ||
+                            nota.nota === "" ||
+                            !Number.isFinite(puntos) ||
+                            !Number.isFinite(maximo) ||
+                            maximo <= 0 ||
+                            puntos < 0 ||
+                            puntos > maximo
+                        ) {
+
+                            return;
+
+                        }
+
+
+                        puntuaciones[idCriterio] = puntos;
+
+                    });
+
+
+                    // ----------------------------------
+                    // PASO 6: CALCULAR EL TOTAL
+                    // ----------------------------------
+
+                    const valores = Object.values(puntuaciones);
+
+
+                    // Comprobar si todas las notas están completas.
+
+                    const completo = valores.every(valor =>
+                        valor !== null
+                    );
+
+
+                    // Sumar las puntuaciones originales.
+
+                    const total = completo
+
+                        ? valores.reduce(
+                            (suma, valor) => suma + valor,
+                            0
+                        )
+
+                        : null;
+
+
+                    return {
+
+                        id: grupo.id_grupos,
+
+                        nombre: grupo.nombre,
+
+                        anio: grupo.año,
+
+                        puntuaciones,
+
+                        total
+
+                    };
+
+                });
+
+
+                // ----------------------------------
+                // PASO 7: ORDENAR LOS GRUPOS
+                // ----------------------------------
+
+                resultados.sort((a, b) => {
+
+                    // Los grupos incompletos quedan al final.
+
+                    if (
+                        a.total === null &&
+                        b.total === null
+                    ) {
+
+                        return a.nombre.localeCompare(b.nombre);
+
+                    }
+
+
+                    if (a.total === null) return 1;
+
+                    if (b.total === null) return -1;
+
+
+                    // Mayor puntuación primero.
+
+                    return b.total - a.total ||
+
+                        a.nombre.localeCompare(b.nombre);
+
+                });
+
+
+                // ----------------------------------
+                // PASO 8: GENERAR LA CABECERA
+                // ----------------------------------
+
+                generarCabecera(resultados);
+
+
+                // ----------------------------------
+                // PASO 9: GENERAR EL TÍTULO
+                // ----------------------------------
+
+                const opcionEvento =
+                    selectorEvento.options[
+                        selectorEvento.selectedIndex
+                    ];
+
+
+                titulo.textContent =
+
+                    "Clasificación: " +
+                    opcionEvento.textContent +
+
+                    (selectorAnio.value
+
+                        ? " — Año: " + selectorAnio.value
+
+                        : " — Todos los años");
+
+
+                // ----------------------------------
+                // PASO 10: GENERAR LAS FILAS
+                // ----------------------------------
+
+                cuerpoTabla.replaceChildren();
+
+
+                criterios.forEach(criterio => {
+
+                    const fila = document.createElement("tr");
+
+
+                    // Nombre del criterio.
+
+                    agregarCelda(
+                        fila,
+
+                        criterio.criterio ||
+
+                        "Criterio " + criterio.id_criterios
+                    );
+
+
+                    // Puntuación de cada grupo.
+
+                    resultados.forEach(grupo => {
+
+                        const puntos =
+
+                            grupo.puntuaciones[
+                                String(criterio.id_criterios)
+                            ];
+
+
+                        agregarCelda(
+
+                            fila,
+
+                            puntos === null
+
+                                ? "—"
+
+                                : puntos
+
+                        );
+
+                    });
+
+
+                    cuerpoTabla.appendChild(fila);
+
+                });
+
+
+                // ----------------------------------
+                // PASO 11: FILA DE TOTALES
+                // ----------------------------------
+
+                const filaTotal =
+                    document.createElement("tr");
+
+
+                filaTotal.classList.add("fila-total");
+
+
+                agregarCelda(
+                    filaTotal,
+                    "PUNTAJE TOTAL OBTENIDO"
+                );
+
+
+                resultados.forEach(grupo => {
+
+                    agregarCelda(
+
+                        filaTotal,
+
+                        grupo.total === null
+
+                            ? "Incompleto"
+
+                            : grupo.total
+
+                    );
+
+                });
+
+
+                cuerpoTabla.appendChild(filaTotal);
+
+
+                // ----------------------------------
+                // PASO 12: FINALIZAR
+                // ----------------------------------
+
+                estado.textContent =
+
+                    "Clasificación calculada correctamente. " +
+
+                    resultados.length +
+
+                    " grupos.";
+
+
+            } catch (error) {
+
+                console.error(
+                    "Error de clasificación:",
+                    error
+                );
+
+
+                mostrarError(
+                    "Error al consultar los datos: " +
+                    error.message
+                );
+
+            }
+
+        }
+
+
+        // ==========================================
+        // 10. INICIAR EL SISTEMA
+        // ==========================================
+
+        cargarEventos();
+
     </script>
+
+
     <script src="main.js"></script>
+
 </body>
+
 </html>
